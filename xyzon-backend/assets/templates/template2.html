@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vibrant Modern Certificate Template</title>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Playfair+Display:wght@400;500;600;700&display=swap");
+    </style>
+  </head>
+  <body
+    style="
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      font-family: 'Inter', sans-serif;
+    "
+  >
+    <div
+      class="certificate-template"
+      style="
+        font-family: 'Inter', sans-serif;
+        background: linear-gradient(
+          45deg,
+          #ffffff 0%,
+          #fefefe 25%,
+          #fcfcff 50%,
+          #f9f9ff 75%,
+          #ffffff 100%
+        );
+        border: 10px solid transparent;
+        background-clip: padding-box;
+        width: 900px;
+        height: 600px;
+        position: relative;
+        box-shadow: 0 35px 70px rgba(102, 126, 234, 0.25),
+          0 25px 50px rgba(118, 75, 162, 0.15),
+          inset 0 2px 4px rgba(255, 255, 255, 0.9);
+        overflow: hidden;
+      "
+    >
+      <!-- Vibrant border gradient overlay -->
+      <div
+        style="
+          position: absolute;
+          top: -10px;
+          left: -10px;
+          right: -10px;
+          bottom: -10px;
+          background: linear-gradient(
+            60deg,
+            #ff6b6b,
+            #4ecdc4,
+            #45b7d1,
+            #96ceb4,
+            #ffeaa7,
+            #dda0dd,
+            #98d8c8,
+            #fd79a8,
+            #fdcb6e,
+            #e17055
+          );
+          border-radius: 35px;
+          z-index: -1;
+        "
+      ></div>
+
+      <!-- Dynamic background pattern -->
+      <div
+        style="
+          position: absolute;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background-image: radial-gradient(
+              circle at 15% 15%,
+              rgba(255, 107, 107, 0.05) 0%,
+              transparent 40%
+            ),
+            radial-gradient(
+              circle at 85% 15%,
+              rgba(78, 205, 196, 0.05) 0%,
+              transparent 40%
+            ),
+            radial-gradient(
+              circle at 15% 85%,
+              rgba(150, 206, 180, 0.05) 0%,
+              transparent 40%
+            ),
+            radial-gradient(
+              circle at 85% 85%,
+              rgba(253, 121, 168, 0.05) 0%,
+              transparent 40%
+            ),
+            radial-gradient(
+              circle at 50% 50%,
+              rgba(69, 183, 209, 0.03) 0%,
+              transparent 50%
+            );
+          z-index: 0;
+        "
+      ></div>
+
+      <!-- Left side geometric design -->
+      <svg
+        style="
+          position: absolute;
+          left: 0;
+          top: 0;
+          height: 100%;
+          width: 180px;
+          z-index: 1;
+        "
+        viewBox="0 0 180 600"
+        preserveAspectRatio="none"
+      >
+        <defs>
+          <linearGradient
+            id="leftGradient1"
+            x1="0%"
+            y1="0%"
+            x2="100%"
+            y2="100%"
+          >
+            <stop offset="0%" style="stop-color: #ff6b6b; stop-opacity: 0.3" />
+            <stop offset="50%" style="stop-color: #4ecdc4; stop-opacity: 0.2" />
+            <stop
+              offset="100%"
+              style="stop-color: #45b7d1; stop-opacity: 0.1"
+            />
+          </linearGradient>
+          <linearGradient
+            id="leftGradient2"
+            x1="0%"
+            y1="0%"
+            x2="100%"
+            y2="100%"
+          >
+            <stop offset="0%" style="stop-color: #96ceb4; stop-opacity: 0.25" />
+            <stop
+              offset="100%"
+              style="stop-color: #ffeaa7; stop-opacity: 0.15"
+            />
+          </linearGradient>
+        </defs>
+
+        <!-- Triangular pattern -->
+        <polygon points="0,0 80,120 0,240" fill="url(#leftGradient1)" />
+        <polygon points="0,180 60,300 0,420" fill="url(#leftGradient2)" />
+        <polygon
+          points="0,360 70,480 0,600"
+          fill="url(#leftGradient1)"
+          opacity="0.7"
+        />
+
+        <!-- Decorative circles -->
+        <circle cx="40" cy="80" r="8" fill="#ff6b6b" opacity="0.4" />
+        <circle cx="60" cy="200" r="6" fill="#4ecdc4" opacity="0.5" />
+        <circle cx="45" cy="320" r="7" fill="#96ceb4" opacity="0.45" />
+        <circle cx="55" cy="440" r="5" fill="#ffeaa7" opacity="0.6" />
+      </svg>
+
+      <!-- Right side geometric design -->
+      <svg
+        style="
+          position: absolute;
+          right: 0;
+          top: 0;
+          height: 100%;
+          width: 180px;
+          z-index: 1;
+        "
+        viewBox="0 0 180 600"
+        preserveAspectRatio="none"
+      >
+        <defs>
+          <linearGradient
+            id="rightGradient1"
+            x1="0%"
+            y1="0%"
+            x2="100%"
+            y2="100%"
+          >
+            <stop offset="0%" style="stop-color: #dda0dd; stop-opacity: 0.1" />
+            <stop offset="50%" style="stop-color: #fd79a8; stop-opacity: 0.2" />
+            <stop
+              offset="100%"
+              style="stop-color: #fdcb6e; stop-opacity: 0.3"
+            />
+          </linearGradient>
+          <linearGradient
+            id="rightGradient2"
+            x1="0%"
+            y1="0%"
+            x2="100%"
+            y2="100%"
+          >
+            <stop offset="0%" style="stop-color: #98d8c8; stop-opacity: 0.15" />
+            <stop
+              offset="100%"
+              style="stop-color: #e17055; stop-opacity: 0.25"
+            />
+          </linearGradient>
+        </defs>
+
+        <!-- Diamond pattern -->
+        <polygon points="180,0 100,120 180,240" fill="url(#rightGradient1)" />
+        <polygon points="180,180 120,300 180,420" fill="url(#rightGradient2)" />
+        <polygon
+          points="180,360 110,480 180,600"
+          fill="url(#rightGradient1)"
+          opacity="0.7"
+        />
+
+        <!-- Decorative elements -->
+        <rect
+          x="140"
+          y="60"
+          width="15"
+          height="15"
+          fill="#fd79a8"
+          opacity="0.5"
+          rx="3"
+        />
+        <rect
+          x="130"
+          y="180"
+          width="12"
+          height="12"
+          fill="#98d8c8"
+          opacity="0.6"
+          rx="2"
+        />
+        <rect
+          x="145"
+          y="300"
+          width="18"
+          height="18"
+          fill="#fdcb6e"
+          opacity="0.4"
+          rx="4"
+        />
+        <rect
+          x="135"
+          y="420"
+          width="14"
+          height="14"
+          fill="#e17055"
+          opacity="0.55"
+          rx="3"
+        />
+      </svg>
+
+      <!-- Company Logo - Top Left -->
+      <img
+        src="{{company_logo}}"
+        alt="Company Logo"
+        style="
+          position: absolute;
+          top: 30px;
+          left: 40px;
+          height: 70px;
+          max-width: 200px;
+          object-fit: contain;
+          z-index: 10;
+          filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15));
+        "
+      />
+
+      <!-- Registration Partner Section - Top Right -->
+      <div
+        class="partner-section"
+        style="
+          position: absolute;
+          top: 30px;
+          right: 40px;
+          text-align: right;
+          z-index: 10;
+        "
+      >
+        <img
+          src="{{partner_logo}}"
+          alt="Registration Partner Logo"
+          style="
+            height: 70px;
+            margin-bottom: 8px;
+            max-width: 190px;
+            object-fit: contain;
+            filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.12));
+          "
+        />
+      </div>
+
+      <!-- Main Content Area -->
+      <div
+        class="content"
+        style="
+          text-align: center;
+          padding: 100px 150px 120px;
+          position: relative;
+          z-index: 10;
+        "
+      >
+        <!-- Certificate Title -->
+        <h2
+          style="
+            font-family: 'Playfair Display', serif;
+            font-weight: 700;
+            color: #2d3748;
+            font-size: 2.6rem;
+            margin: 0 0 18px 0;
+            line-height: 1.2;
+            text-shadow: 0 3px 8px rgba(45, 55, 72, 0.15);
+            letter-spacing: -0.02em;
+          "
+        >
+          {{cert_title}}
+        </h2>
+
+        <!-- Decorative divider -->
+        <div
+          style="
+            width: 120px;
+            height: 4px;
+            background: linear-gradient(
+              90deg,
+              #ff6b6b,
+              #4ecdc4,
+              #96ceb4,
+              #ffeaa7
+            );
+            margin: 0 auto 24px;
+            border-radius: 2px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+          "
+        ></div>
+
+        <!-- Certificate Subtitle -->
+        <p
+          style="
+            font-family: 'Inter', sans-serif;
+            font-size: 1.25rem;
+            color: #4a5568;
+            font-weight: 500;
+            margin: 0 0 18px 0;
+            letter-spacing: 0.3px;
+            line-height: 1.4;
+          "
+        >
+          {{cert_subtitle}}
+        </p>
+
+        <!-- Participant Name with vibrant styling -->
+        <div style="position: relative; display: inline-block; margin: 10px 0">
+          <h1
+            style="
+              font-family: 'Playfair Display', serif;
+              font-size: 3rem;
+              font-weight: 700;
+              color: #e53e3e;
+              margin: 0;
+              line-height: 1.1;
+              position: relative;
+              z-index: 5;
+              text-shadow: 0 4px 16px rgba(229, 62, 62, 0.3);
+              letter-spacing: -0.03em;
+            "
+          >
+            {{participant_name}}
+          </h1>
+          <!-- Colorful glow effect -->
+          <div
+            style="
+              position: absolute;
+              top: 50%;
+              left: 50%;
+              transform: translate(-50%, -50%);
+              width: 130%;
+              height: 130%;
+              background: radial-gradient(
+                ellipse,
+                rgba(229, 62, 62, 0.15) 0%,
+                rgba(78, 205, 196, 0.08) 50%,
+                transparent 70%
+              );
+              border-radius: 50%;
+              z-index: 1;
+            "
+          ></div>
+        </div>
+
+        <!-- Midline Description -->
+        <p
+          style="
+            font-family: 'Inter', sans-serif;
+            font-size: 1.15rem;
+            color: #2d3748;
+            font-weight: 400;
+            margin: 10px 0;
+            letter-spacing: 0.02em;
+            line-height: 1.5;
+          "
+        >
+          {{cert_midline}}
+        </p>
+
+        <!-- Event Name with colorful styling -->
+        <div style="position: relative; display: inline-block; margin: 8px 0">
+          <h3
+            style="
+              font-family: 'Inter', sans-serif;
+              font-size: 1.9rem;
+              font-weight: 700;
+              color: #3182ce;
+              margin: 0;
+              position: relative;
+              z-index: 5;
+              text-shadow: 0 2px 8px rgba(49, 130, 206, 0.2);
+              letter-spacing: -0.01em;
+            "
+          >
+            {{event_name}}
+          </h3>
+          <!-- Multi-color underline -->
+          <div
+            style="
+              width: 100px;
+              height: 4px;
+              background: linear-gradient(90deg, #fd79a8, #fdcb6e, #98d8c8);
+              margin: 10px auto;
+              border-radius: 2px;
+              box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            "
+          ></div>
+        </div>
+
+        <!-- Event Date -->
+        <p
+          style="
+            font-family: 'Inter', sans-serif;
+            font-size: 1.1rem;
+            color: #4a5568;
+            font-weight: 500;
+            margin: 12px 0 0 0;
+            letter-spacing: 0.5px;
+          "
+        >
+          held on
+          <span style="color: #2d3748; font-weight: 600">{{event_date}}</span>
+        </p>
+      </div>
+
+      <!-- Authority Signature Section - Bottom Right -->
+      <div
+        class="signature-section"
+        style="
+          position: absolute;
+          bottom: 20px;
+          right: 50px;
+          text-align: right;
+          z-index: 10;
+        "
+      >
+        <img
+          src="{{authority_signature}}"
+          alt="Authority Signature"
+          style="
+            height: 55px;
+            max-width: 200px;
+            object-fit: contain;
+            filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.1));
+          "
+        />
+        <div
+          style="
+            width: 200px;
+            height: 4px;
+            background: linear-gradient(90deg, #4ecdc4, #45b7d1, #96ceb4);
+            margin: 8px 0 4px auto;
+            border-radius: 2px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+          "
+        ></div>
+        <div
+          style="
+            font-family: 'Inter', sans-serif;
+            font-weight: 700;
+            color: #2d3748;
+            font-size: 1.1rem;
+            margin-bottom: 6px;
+            letter-spacing: -0.01em;
+          "
+        >
+          {{authority_name}}
+        </div>
+        <div
+          style="
+            font-family: 'Inter', sans-serif;
+            font-size: 0.9rem;
+            color: #4a5568;
+            font-weight: 500;
+            margin-bottom: 4px;
+          "
+        >
+          {{authority_role}}
+        </div>
+        <div
+          style="
+            font-family: 'Inter', sans-serif;
+            font-size: 0.9rem;
+            color: #4a5568;
+            font-weight: 500;
+          "
+        >
+          {{company_name}}
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
