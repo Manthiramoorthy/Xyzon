@@ -14,7 +14,7 @@ const DEFAULT_AUTHORITY = {
     name: "Head",
     role: "InspireX Innovation Unit",
     companyName: "Xyzon Innovations Private Limited",
-    logoDataUrl: "/assets/images/default-logo.png",
+    logoDataUrl: "/assets/images/inspirex-xyzon.png",
     partnerLogoDataUrl: "/assets/images/default-partner.png",
     signatureDataUrl: "/assets/images/default-signature.png",
     certTitle: "Certificate of Appreciation",
@@ -105,7 +105,7 @@ function CertificateGenerator() {
         html = html.replace(/\{\{event_type\}\}/g, data.event_type || "Workshop");
         html = html.replace(/\{\{authority_name\}\}/g, authority.name || "Dr. Sarah Wilson");
         html = html.replace(/\{\{authority_role\}\}/g, authority.role || "Program Director");
-        html = html.replace(/\{\{company_logo\}\}/g, authority.logoDataUrl || "/assets/images/default-logo.png");
+        html = html.replace(/\{\{company_logo\}\}/g, authority.logoDataUrl || "/assets/images/inspirex-xyzon.png");
         html = html.replace(/\{\{partner_logo\}\}/g, authority.partnerLogoDataUrl || "/assets/images/default-partner.png");
         html = html.replace(/\{\{authority_signature\}\}/g, authority.signatureDataUrl || "/assets/images/default-signature.png");
         return html;

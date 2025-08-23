@@ -23,6 +23,7 @@ export default function SendPersonalizedMail() {
     const [showResult, setShowResult] = useState(true);
     const [previewIndex, setPreviewIndex] = useState(0);
     const [showModal, setShowModal] = useState(false);
+    const [subject, setSubject] = useState('');
 
     const addAttachment = att => setAttachments(a => [...a, att]);
     const removeAttachment = i => setAttachments(a => a.filter((_, idx) => idx !== i));
@@ -72,6 +73,7 @@ export default function SendPersonalizedMail() {
         setSending(true); setResult(null);
         try {
             const payload = {
+                subject,
                 template,
                 recipients,
                 attachments: attachments.length ? attachments : undefined
@@ -95,7 +97,7 @@ export default function SendPersonalizedMail() {
     };
 
     return (
-        <div className="container justify-content-center" style={{ position: 'relative', marginTop: 76, marginBottom: 76 }}>
+        <div className="mx-5 justify-content-center" style={{ position: 'relative', marginTop: 96, marginBottom: 76 }}>
             {sending && (
                 <div style={{
                     position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
@@ -114,54 +116,81 @@ export default function SendPersonalizedMail() {
                 </div>
             )}
             {/* Recipients and template input */}
-            <div className="card shadow-sm mb-4">
-                <div className="card-body">
-                    <div className="mb-2">
-                        <label className="form-label">HTML Template</label>
-                        <textarea className="form-control" rows={6} value={template} onChange={e => setTemplate(e.target.value)} placeholder="Paste your HTML template with {placeholders}" />
-                    </div>
-                    <div className="mb-2">
-                        <label className="form-label">Recipients</label>
-                        <input className="form-control" type="file" accept=".csv" onChange={handleCsvUpload} />
-
-                        {csvError && <div className="text-danger mt-1">{csvError}</div>}
-                    </div>
-                    <div className="mb-2">
-                        <label className="form-label">Attachments</label>
-                        <AttachmentInput onAdd={addAttachment} inputId="personalized-attach-file" />
-                        <div className="mt-2">
-                            {attachments.map((a, i) => (
-                                <div key={i} className="d-flex align-items-center justify-content-between bg-light p-2 rounded mb-1">
-                                    <div>
-                                        <div className="fw-bold">{a.filename}</div>
-                                        <div className="small text-muted">{a.contentType}</div>
-                                    </div>
-                                    <button className="btn btn-sm btn-outline-danger" onClick={() => removeAttachment(i)}>Remove</button>
-                                </div>
-                            ))}
+            <div className="row">
+                <div className="col-lg-4">
+                    <div className="card shadow-sm mb-4">
+                        <div
+                            className="justify-content-between d-flex mx-3"
+                        >
+                             <button
+                                className="btn btn-outline-secondary shadow me-3"
+                                style={{ minWidth: 150, fontWeight: 600, fontSize: 18 }}
+                                onClick={() => { setTemplate(''); setRecipients([]); setRecipientsRaw(''); setAttachments([]); }}
+                            >
+                                Reset
+                            </button>
+                            <button
+                                className="btn btn-success shadow"
+                                style={{ minWidth: 150, fontWeight: 600, fontSize: 18 }}
+                                onClick={sendMail}
+                                disabled={sending || !template || !subject || recipients.length === 0}
+                            >
+                                Send
+                            </button>
+                           
                         </div>
-                    </div>
-                    <div className="d-flex gap-2">
-                        <button className="btn btn-success" onClick={sendMail} disabled={sending || !template || recipients.length === 0}>Send</button>
-                        <button className="btn btn-outline-secondary" onClick={() => { setTemplate(''); setRecipients([]); setRecipientsRaw(''); setAttachments([]); }}>Reset</button>
+                        <div className="card-body">
+                            <div className="mb-2">
+                                <label className="form-label">Subject</label>
+                                <input className="form-control" type="text" value={subject} onChange={e => setSubject(e.target.value)} placeholder="Enter email subject" />
+                            </div>
+                            <div className="mb-2">
+                                <label className="form-label">Recipients</label>
+                                <input className="form-control" type="file" accept=".csv" onChange={handleCsvUpload} />
+
+                                {csvError && <div className="text-danger mt-1">{csvError}</div>}
+                            </div>
+                            <div className="mb-2">
+                                <label className="form-label">HTML Template</label>
+                                <textarea className="form-control" rows={8} value={template} onChange={e => setTemplate(e.target.value)} placeholder="Paste your HTML template with {placeholders}" />
+                            </div>
+
+                            <div className="mb-2">
+                                <label className="form-label">Attachments</label>
+                                <AttachmentInput onAdd={addAttachment} inputId="personalized-attach-file" />
+                                <div className="mt-2">
+                                    {attachments.map((a, i) => (
+                                        <div key={i} className="d-flex align-items-center justify-content-between bg-light p-2 rounded mb-1">
+                                            <div>
+                                                <div className="fw-bold">{a.filename}</div>
+                                                <div className="small text-muted">{a.contentType}</div>
+                                            </div>
+                                            <button className="btn btn-sm btn-outline-danger" onClick={() => removeAttachment(i)}>Remove</button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
-            </div>
-            {/* Preview section */}
-            <div className="card shadow-sm mb-4"style={{ position: 'relative', textAlign: 'center' }}>
-                <div className="card-body">
-                    <h5>Preview</h5>
-                    <div className="mb-2">
-                        <button className="btn btn-outline-primary btn-sm me-2" onClick={() => setPreviewIndex(i => Math.max(0, i - 1))} disabled={previewIndex === 0}>Previous</button>
-                        <button className="btn btn-outline-primary btn-sm" onClick={() => setPreviewIndex(i => Math.min(recipients.length - 1, i + 1))} disabled={previewIndex === recipients.length - 1}>Next</button>
-                        <span className="ms-2">{recipients.length > 0 ? `Previewing ${previewIndex + 1} of ${recipients.length}` : 'No recipient loaded'}</span>
-                    </div>
-                    <div className="d-flex text-start align-items-center justify-content-center" style={{ maxHeight: 470, minHeight: 444, background: '#f8f9fa' }}>
-                        <div style={{ background: '#fff', boxShadow: '0 0 8px rgba(0,0,0,0.05)', maxWidth: '100%', width: '900px', maxHeight: 460, minHeight: 440, padding: '20px' }}>
-                            <div dangerouslySetInnerHTML={{ __html: renderTemplate(template, previewData) }} />
+                {/* Preview section */}
+                <div className="col-lg-8">
+                    <div className="card shadow-sm mb-4" style={{ position: 'relative', textAlign: 'center' }}>
+                        <div className="card-body">
+                            <h5>Preview</h5>
+                            <div className="mb-2">
+                                <button className="btn btn-outline-primary btn-sm me-2" onClick={() => setPreviewIndex(i => Math.max(0, i - 1))} disabled={previewIndex === 0}>Previous</button>
+                                <button className="btn btn-outline-primary btn-sm" onClick={() => setPreviewIndex(i => Math.min(recipients.length - 1, i + 1))} disabled={previewIndex === recipients.length - 1}>Next</button>
+                                <span className="ms-2">{recipients.length > 0 ? `Previewing ${previewIndex + 1} of ${recipients.length}` : 'No recipient loaded'}</span>
+                            </div>
+                            <div className="d-flex text-start align-items-center justify-content-center" style={{ maxHeight: 470, minHeight: 444, background: '#f8f9fa' }}>
+                                <div style={{ background: '#fff', boxShadow: '0 0 8px rgba(0,0,0,0.05)', maxWidth: '100%', width: '900px', maxHeight: 460, minHeight: 440, padding: '20px', overflowY: 'auto' }}>
+                                    <div dangerouslySetInnerHTML={{ __html: renderTemplate(template, previewData) }} />
+                                </div>
+                            </div>
+                            <div className="mt-2 small text-muted">Current recipient: {previewData.email || '-'}</div>
                         </div>
                     </div>
-                    <div className="mt-2 small text-muted">Current recipient: {previewData.email || '-'}</div>
                 </div>
             </div>
             {/* Modal for API result */}
@@ -195,6 +224,33 @@ export default function SendPersonalizedMail() {
                                 <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>Close</button>
                             </div>
                         </div>
+                    </div>
+                </div>
+            )}
+        
+            {/* Excel/CSV Preview Table */}
+            {recipients.length > 0 && (
+                <div className="card mt-4 mb-5 shadow-sm">
+                    <div className="card-header fw-bold">Excel/CSV Data Preview</div>
+                    <div className="table-responsive" style={{ maxHeight: 320, overflowY: 'auto' }}>
+                        <table className="table table-bordered table-sm mb-0">
+                            <thead className="table-light">
+                                <tr>
+                                    {Object.keys(recipients[0] || {}).map((key) => (
+                                        <th key={key}>{key}</th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {recipients.map((row, i) => (
+                                    <tr key={i}>
+                                        {Object.keys(recipients[0] || {}).map((key) => (
+                                            <td key={key}>{row[key]}</td>
+                                        ))}
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             )}

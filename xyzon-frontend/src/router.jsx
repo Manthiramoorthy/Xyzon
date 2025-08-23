@@ -1,8 +1,8 @@
 import React from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import App from "./App";
 import { CertificateGenerator, SendPersonalizedMail } from "./pages";
 import { Header } from "./components/Header";
+import App from "./App.jsx";
 
 export default function AppRouter() {
     return (

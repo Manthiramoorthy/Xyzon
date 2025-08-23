@@ -16,7 +16,7 @@ const sendMailService = async ({ to, cc, bcc, subject, content, attachments }) =
         to: to || undefined,
         cc: cc || undefined,
         bcc: bcc || undefined,
-        subject,
+        subject: subject,
         html: content,
         attachments: Array.isArray(attachments) ? attachments.map(att => ({
             filename: att.filename,
@@ -54,7 +54,7 @@ const sendMailService = async ({ to, cc, bcc, subject, content, attachments }) =
     return 'Email sent successfully';
 };
 
-const sendPersonalizedBulkService = async (template, recipients, attachments) => {
+const sendPersonalizedBulkService = async (subject, template, recipients, attachments) => {
     let sent = 0;
     for (const recipient of recipients) {
         let html = template;
@@ -63,7 +63,7 @@ const sendPersonalizedBulkService = async (template, recipients, attachments) =>
         }
         await sendMailService({
             to: recipient.email,
-            subject: 'Personalized Mail',
+            subject: subject,
             content: html,
             attachments
         });
