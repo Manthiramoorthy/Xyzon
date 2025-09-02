@@ -1,6 +1,9 @@
 import "bootstrap/dist/css/bootstrap.min.css";
-import { FaPhoneAlt, FaEnvelope, FaMapMarkerAlt, FaClock, FaGlobe, FaHandsHelping, FaLaptopCode, FaPaintBrush, FaInstagram, FaFacebookF, FaLinkedin, FaTwitter } from 'react-icons/fa';
+import { FaPhoneAlt, FaEnvelope, FaMapMarkerAlt, FaClock, FaGlobe, FaHandsHelping, FaLaptopCode, FaPaintBrush, FaInstagram, FaFacebookF, FaLinkedin, FaTwitter, FaUserGraduate, FaAward, FaBriefcase, FaFlag } from 'react-icons/fa';
 import React, { useEffect, useRef, useState } from 'react';
+import { useMenu } from './context/MenuContext';
+import { useAuth } from './auth/AuthContext';
+import { Link } from 'react-router-dom';
 import './App.css';
 
 function useCountUp(target, duration = 1500) {
@@ -21,6 +24,9 @@ function useCountUp(target, duration = 1500) {
 }
 
 export default function App() {
+  const { user } = useAuth ? useAuth() : { user: null }; // defensively fallback
+  const { clearItems } = useMenu ? useMenu() : { clearItems: () => { } };
+  useEffect(() => { clearItems(); }, [clearItems]);
   // Navigation Menu Data
   const navigationItems = [
     { label: 'Home', href: '#' },
@@ -73,49 +79,81 @@ export default function App() {
   const programs = [
     {
       title: 'Technical Certifications',
-      description: 'Industry-recognized credentials and hands-on labs.',
-      badge: { text: 'Popular', style: 'bg-primary px-3 py-1' },
+      description: 'Global IT credentials & practical lab exposure.',
+      badge: 'Popular',
+      icon: FaLaptopCode,
+      iconColor: 'navy',
       features: [
-        'Oracle, Microsoft, CompTIA+',
-        'Cybersecurity, Cloud, Networking',
-        'Data Science, DevOps, AI/ML',
-        'Full Stack, Blockchain'
+        'Oracle / Microsoft / CompTIA',
+        'Cybersecurity & Cloud',
+        'Data / DevOps / AI & ML',
+        'Full Stack & Blockchain'
       ]
     },
     {
       title: 'Creative Skills Development',
-      description: 'Animation, design and digital storytelling.',
-      badge: { text: 'New', style: { background: 'var(--green)', color: 'var(--bg-primary)' } },
+      description: 'Design, media & digital storytelling pathways.',
+      badge: 'Creative',
+      icon: FaPaintBrush,
+      iconColor: 'orange',
       features: [
         'Animation & Graphic Design',
-        'Video Editing',
+        'Video & Motion Editing',
         'Digital Marketing',
-        'UI/UX Design'
+        'UI / UX Fundamentals'
       ]
     },
     {
-      title: 'Faculty Development Programs',
-      description: 'Upskilling educators with modern pedagogy.',
-      badge: { text: 'FDP', style: { background: 'var(--purple)', color: 'white' } },
-      features: ['Cutting-edge methodologies and emerging technology training for educators.']
+      title: 'Faculty Development (FDP)',
+      description: 'Modern pedagogy & emerging tech enablement.',
+      badge: 'FDP',
+      icon: FaHandsHelping,
+      iconColor: 'orange-light',
+      features: [
+        'Outcome-based delivery',
+        'Emerging tech masterclasses',
+        'Assessment frameworks',
+        'Mentor resource kits'
+      ]
     },
     {
-      title: 'Software Product Development',
-      description: 'MVPs, consulting and engineering partnerships.',
-      badge: { text: 'Agency', style: { background: 'var(--orange)', color: 'var(--bg-primary)' } },
-      features: ['End-to-end product creation and delivery support.']
+      title: 'Software Product Engineering',
+      description: 'Full-cycle build & technical acceleration.',
+      badge: 'Build',
+      icon: FaLaptopCode,
+      iconColor: 'orange',
+      features: [
+        'MVP & rapid prototyping',
+        'Architecture & scaling',
+        'Dev sprints & QA automation',
+        'Launch & support'
+      ]
     },
     {
-      title: 'Corporate Training',
-      description: 'Tailored upskilling for organizations.',
-      badge: { text: 'B2B', style: 'bg-secondary text-white' },
-      features: ['Contract-based programs for India and international clients.']
+      title: 'Corporate Upskilling',
+      description: 'Tailored workforce capability programs.',
+      badge: 'B2B',
+      icon: FaGlobe,
+      iconColor: 'navy',
+      features: [
+        'Role gap mapping',
+        'Custom learning paths',
+        'Productivity analytics',
+        'Certification pathways'
+      ]
     },
     {
       title: 'Makerspace Initiative',
-      description: 'Rural talent access to global marketplaces.',
-      badge: { text: 'Impact', style: { background: 'var(--green)', color: 'var(--bg-primary)' } },
-      features: ['Connect rural professionals with paid digital projects.']
+      description: 'Rural + student talent to global marketplaces.',
+      badge: 'Impact',
+      icon: FaHandsHelping,
+      iconColor: 'green',
+      features: [
+        'Project sourcing bridge',
+        'Mentor & tool access',
+        'Earn while learning',
+        'Community innovation hub'
+      ]
     }
   ];
 
@@ -167,6 +205,30 @@ export default function App() {
         'Mentorship programs',
         'Project collaboration',
         'Freelance marketplace access'
+      ]
+    },
+    {
+      icon: FaLaptopCode,
+      gradient: 'bg-gradient-primary',
+      title: 'Hackathons Centric Learning',
+      description: 'Immersive hackathon-led learning modules driving rapid skill acquisition and innovation.',
+      features: [
+        'Problem-focused sprints',
+        'Industry challenge statements',
+        'Mentor-led innovation',
+        'Prototype to product pathways'
+      ]
+    },
+    {
+      icon: FaHandsHelping,
+      gradient: 'bg-gradient-success',
+      title: 'Entrepreneur Ecosystem Enablement',
+      description: 'Support framework for student & rural founders to ideate, validate and scale ventures.',
+      features: [
+        'Ideation workshops',
+        'MVP & market validation',
+        'Investor & mentor connects',
+        'Incubation readiness'
       ]
     }
   ];
@@ -268,30 +330,21 @@ export default function App() {
     '/assets/images/slide/fdp-bengalore.jpeg'
   ];
 
-  const students = useCountUp(1000, 2000); // 3M+ ticker
+  const students = useCountUp(25000, 2000); // Updated to 25000+
   const certifications = useCountUp(50, 1600);
   const placements = useCountUp(200, 1600);
-  const partners = useCountUp(50, 1600);
+  const countries = useCountUp(7, 1600); // Countries reached metric
+
+  const stats = [
+    { label: 'Learners Reached', value: students, icon: FaUserGraduate, color: 'circle-navy', suffix: '+' },
+    { label: 'Certifications Delivered', value: certifications, icon: FaAward, color: 'circle-orange', suffix: '+' },
+    { label: 'Global Placements', value: placements, icon: FaBriefcase, color: 'circle-orange-light', suffix: '+' },
+    { label: 'Countries Reached', value: countries, icon: FaFlag, color: 'circle-green', suffix: '+' }
+  ];
 
   return (
     <div>
-      <nav className="navbar navbar-expand-lg px-4 fixed-top" style={{ backgroundColor: '#F8FAFC' }}>
-        <a className="navbar-brand d-flex align-items-center gap-2" href="#">
-          <img src="/assets/images/default-logo.jpeg" alt="xyzon" style={{ height: 70 }} />
-        </a>
-        <button className="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#nav" aria-controls="nav" aria-expanded="false" aria-label="Toggle navigation">
-          <span className="navbar-toggler-icon" />
-        </button>
-        <div className="collapse navbar-collapse" id="nav">
-          <ul className="navbar-nav ms-auto align-items-lg-center">
-            {navigationItems.map((item, index) => (
-              <li key={index} className="nav-item">
-                <a className="nav-link" href={item.href}>{item.label}</a>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </nav>
+      {/* Unified Header component provides top navigation globally */}
 
       <section className="hero-section">
         <div className="hero-bg"></div>
@@ -364,8 +417,8 @@ export default function App() {
               </div>
               <div className="col-6">
                 <div className="text-center">
-                  <div className="text-gradient fw-bold" style={{ fontSize: '2rem' }}>50+</div>
-                  <div className="text-muted small">Corporate Partners</div>
+                  <div className="text-gradient fw-bold" style={{ fontSize: '2rem' }}>7+</div>
+                  <div className="text-muted small">Countries Reached</div>
                 </div>
               </div>
             </div>
@@ -424,7 +477,7 @@ export default function App() {
         <div className="row g-4">
           {whyChooseFeatures.map((feature, index) => (
             <div key={index} className="col-lg-3 col-md-6">
-              <div className="card h-100 text-center">
+              <div className="card feature-card h-100 text-center p-4">
                 <div className={`icon-circle mb-3 mx-auto ${feature.gradient}`}>
                   <feature.icon size={24} className="text-white" />
                 </div>
@@ -437,61 +490,43 @@ export default function App() {
       </section>
 
       <section className="container py-5">
-        <div className="row g-4 mb-5">
-          <div className="col-lg-3 col-md-6">
-            <div className="stat-card">
-              <div className="stat-number text-gradient">{students.toLocaleString()}+</div>
-              <div className="text-muted">Learners Reached</div>
+        <div className="stats-grid mb-4">
+          {stats.map((s, i) => (
+            <div key={i} className="stat-card">
+              <div className="stat-accent-bar" />
+              <div className={`stat-icon ${s.color}`}>
+                <s.icon size={26} />
+              </div>
+              <div className="stat-number text-gradient">{s.value.toLocaleString()}{s.suffix}</div>
+              <div className="stat-label">{s.label}</div>
             </div>
-          </div>
-          <div className="col-lg-3 col-md-6">
-            <div className="stat-card">
-              <div className="stat-number text-gradient">{certifications.toLocaleString()}+</div>
-              <div className="text-muted">Certifications Delivered</div>
-            </div>
-          </div>
-          <div className="col-lg-3 col-md-6">
-            <div className="stat-card">
-              <div className="stat-number text-gradient">{placements.toLocaleString()}+</div>
-              <div className="text-muted">Global Placements</div>
-            </div>
-          </div>
-          <div className="col-lg-3 col-md-6">
-            <div className="stat-card">
-              <div className="stat-number text-gradient">{partners.toLocaleString()}+</div>
-              <div className="text-muted">Corporate Partners</div>
-            </div>
-          </div>
+          ))}
         </div>
       </section>
 
       <section id="programs" className="container py-5">
-        <h2 className="text-center text-gradient fw-bold mb-5" style={{ fontSize: '3rem' }}>Comprehensive Learning Solutions</h2>
-        <div className="row g-4">
-          {programs.map((program, index) => (
-            <div key={index} className="col-lg-4 col-md-6">
-              <div className="program-card h-100 p-4">
-                <div className="d-flex justify-content-between align-items-start mb-3">
-                  <div>
-                    <h5 className="fw-bold mb-2">{program.title}</h5>
-                    <p className="text-muted small">{program.description}</p>
-                  </div>
-                  <span
-                    className={typeof program.badge.style === 'string' ? `badge ${program.badge.style}` : 'badge'}
-                    style={typeof program.badge.style === 'object' ? program.badge.style : {}}
-                  >
-                    {program.badge.text}
-                  </span>
-                </div>
-                {program.features.length > 1 ? (
-                  <ul className="text-muted list-unstyled">
-                    {program.features.map((feature, featureIndex) => (
-                      <li key={featureIndex} className="mb-2">• {feature}</li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="text-muted">{program.features[0]}</p>
-                )}
+        <h2 className="text-center text-gradient fw-bold mb-4" style={{ fontSize: '3rem' }}>Comprehensive Learning Solutions</h2>
+        <p className="text-muted text-center mx-auto mb-5" style={{ maxWidth: '760px' }}>
+          Structured learning ecosystems spanning certifications, creative disciplines, pedagogy enablement, engineering delivery, corporate transformation and maker-driven impact.
+        </p>
+        <div className="learning-grid">
+          {programs.map((p, i) => (
+            <div key={i} className="learning-card">
+              <div className={`learning-icon ${p.iconColor === 'green' ? 'circle-green' : p.iconColor === 'orange-light' ? 'circle-orange-light' : p.iconColor === 'orange' ? 'circle-orange' : 'circle-navy'}`}>
+                <p.icon size={26} />
+              </div>
+              <div className="learning-head">
+                {p.title}
+                <span className={`learning-badge ${i % 2 === 1 ? 'alt' : ''}`}>{p.badge}</span>
+              </div>
+              <div className="learning-desc">{p.description}</div>
+              <ul className="learning-features">
+                {p.features.map((f, fi) => (
+                  <li key={fi}>{f}</li>
+                ))}
+              </ul>
+              <div className="learning-footer">
+                <a href="#contact" className="learning-cta">Learn More →</a>
               </div>
             </div>
           ))}
@@ -631,6 +666,10 @@ export default function App() {
               <div className="mb-3">
                 <label className="form-label">Email</label>
                 <input className="form-control" type="email" required />
+              </div>
+              <div className="mb-3">
+                <label className="form-label">Contact Number</label>
+                <input className="form-control" type="tel" pattern="[0-9+\-() ]{7,}" placeholder="e.g. +91 98765 43210" required />
               </div>
               <div className="mb-3 flex-grow-1">
                 <label className="form-label">Message</label>
