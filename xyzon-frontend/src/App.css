@@ -13,13 +13,26 @@
 }
 
 html { scroll-behavior: smooth; scroll-padding-top: 100px; }
-body { font-family: 'Inter', system-ui, sans-serif; background:#fff; color: var(--navy); line-height:1.6; }
+body { 
+  font-family: 'Inter', system-ui, sans-serif; 
+  background:#fff; 
+  color: var(--navy); 
+  line-height:1.6;
+  margin: 0;
+  overflow-x: hidden; /* Prevent horizontal scroll bar */
+}
+
+/* Add padding only when header is present (not on auth pages) */
+body:not(.auth-page) {
+  padding-top: 80px; /* Add padding to prevent content hiding behind fixed header */
+}
+
 * { box-sizing: border-box; }
 #root { margin:0 auto; }
 
 .line-clamp-4, .line-clamp-1 { display:-webkit-box; -webkit-box-orient:vertical; overflow:hidden; text-overflow:ellipsis; }
-.line-clamp-4 { -webkit-line-clamp:4; }
-.line-clamp-1 { -webkit-line-clamp:1; }
+.line-clamp-4 { -webkit-line-clamp:4; line-clamp: 4; }
+.line-clamp-1 { -webkit-line-clamp:1; line-clamp: 1; }
 
 .text-primary { color: var(--navy) !important; }
 .text-gradient { color: var(--navy) !important; -webkit-text-fill-color: var(--navy); }
@@ -28,6 +41,54 @@ body { font-family: 'Inter', system-ui, sans-serif; background:#fff; color: var(
 /* Cards / glass simplified */
 .card, .program-card, .service-card, .stat-card, .testimonial-card { background: var(--white); border:1px solid var(--border); border-radius:16px; box-shadow: var(--shadow); transition:.25s; }
 .card:hover, .program-card:hover, .service-card:hover, .stat-card:hover, .testimonial-card:hover { box-shadow: var(--shadow-hover); transform:translateY(-4px); }
+
+/* Event Management Styles */
+.event-card {
+    transition: all 0.3s ease;
+    border: 1px solid var(--border);
+}
+
+.event-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--shadow-hover);
+}
+
+.event-details small {
+    font-size: 0.8rem;
+    color: var(--muted);
+}
+
+.badge {
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.sticky-top {
+    position: sticky;
+    top: 100px;
+}
+
+/* Admin Event Management */
+.btn-group-vertical .btn-group {
+    margin-bottom: 0.25rem;
+}
+
+.btn-group-vertical .btn {
+    font-size: 0.8rem;
+    padding: 0.4rem 0.8rem;
+}
+
+/* Registration Form */
+.form-label {
+    font-weight: 600;
+    color: var(--navy);
+    margin-bottom: 0.5rem;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: var(--orange);
+    box-shadow: 0 0 0 0.2rem rgba(242, 107, 36, 0.25);
+}
 
 /* Icon circle flat fills mapped from previous gradient classes */
 .icon-circle { width:60px; height:60px; border-radius:16px; display:inline-flex; align-items:center; justify-content:center; box-shadow: var(--shadow); }

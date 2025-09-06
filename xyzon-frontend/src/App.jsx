@@ -32,6 +32,7 @@ export default function App() {
     { label: 'Home', href: '#' },
     { label: 'About Us', href: '#about' },
     { label: 'Programs', href: '#programs' },
+    { label: 'Events', href: '/events' },
     { label: 'Services', href: '#services' },
     { label: 'Success Stories', href: '#testimonials' },
     { label: 'Contact', href: '#contact' }

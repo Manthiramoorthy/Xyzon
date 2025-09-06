@@ -11,18 +11,65 @@ export function AuthProvider({ children }) {
     const [error, setError] = useState(null);
 
     useEffect(() => {
-        (async () => {
+        let isMounted = true;
+        let isBootstrapping = false;
+
+        const initializeAuth = async () => {
+            if (isBootstrapping) return; // Prevent multiple bootstrap attempts
+            isBootstrapping = true;
+
             try {
-                await bootstrapAuth();
-                const me = await getMe().catch(() => null);
-                if (me) {
-                    setUser(me.user);
-                    localStorage.setItem('u', JSON.stringify(me.user));
+                // Try to restore from localStorage first
+                const storedUser = localStorage.getItem('u');
+                if (storedUser) {
+                    try {
+                        const parsedUser = JSON.parse(storedUser);
+                        if (isMounted) setUser(parsedUser);
+                    } catch (e) {
+                        localStorage.removeItem('u');
+                    }
+                }
+
+                // Now check if we have valid authentication
+                const hasValidAuth = await bootstrapAuth();
+                if (!hasValidAuth) {
+                    // No valid auth, clear everything
+                    if (isMounted) {
+                        setUser(null);
+                        localStorage.removeItem('u');
+                    }
+                } else {
+                    // We have valid auth, but let's verify user info
+                    try {
+                        const me = await getMe();
+                        if (me && isMounted) {
+                            setUser(me.user);
+                            localStorage.setItem('u', JSON.stringify(me.user));
+                        }
+                    } catch (error) {
+                        // getMe failed, but we have valid tokens - keep existing user or set null
+                        console.log('Failed to get user info, but auth is valid');
+                    }
+                }
+            } catch (error) {
+                console.log('Auth initialization failed:', error.message);
+                if (isMounted) {
+                    setUser(null);
+                    localStorage.removeItem('u');
                 }
             } finally {
-                setLoading(false);
+                if (isMounted) {
+                    setLoading(false);
+                }
+                isBootstrapping = false;
             }
-        })();
+        };
+
+        initializeAuth();
+
+        return () => {
+            isMounted = false;
+        };
     }, []);
 
     const login = useCallback(async (email, password) => {

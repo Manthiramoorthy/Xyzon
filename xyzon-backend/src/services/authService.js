@@ -3,7 +3,7 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const User = require('../models/User');
 
-const ACCESS_TTL = '15m';
+const ACCESS_TTL = '2h';
 const REFRESH_TTL_DAYS = 30; // manual tracking
 
 function signAccess(user) {

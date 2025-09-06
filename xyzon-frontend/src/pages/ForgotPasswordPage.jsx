@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { forgotPassword, resetPassword } from '../auth/authService';
 import { FiMail, FiLock, FiRefreshCcw, FiAlertCircle, FiCheckCircle } from 'react-icons/fi';
@@ -12,6 +12,14 @@ export default function ForgotPasswordPage() {
     const [msg, setMsg] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+
+    // Add auth page class to body to prevent header padding
+    useEffect(() => {
+        document.body.classList.add('auth-page');
+        return () => {
+            document.body.classList.remove('auth-page');
+        };
+    }, []);
 
     const request = async e => { e.preventDefault(); setLoading(true); setError(''); try { await forgotPassword(email); setMsg('If account exists, a reset link or token has been generated. (Dev token may display below)'); setStage('token'); } catch (err) { setError(err.message); } finally { setLoading(false); } };
     const reset = async e => { e.preventDefault(); setLoading(true); setError(''); try { await resetPassword({ token, password }); setMsg('Password reset successful. You can login now.'); setStage('done'); } catch (err) { setError(err.message); } finally { setLoading(false); } };

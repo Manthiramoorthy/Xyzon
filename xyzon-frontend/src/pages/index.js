@@ -1,2 +1,13 @@
 export { default as SendPersonalizedMail } from './SendPersonalizedMail';
 export { default as CertificateGenerator } from './CertificateGenerator';
+export { default as EventList } from './EventList';
+export { default as EventDetails } from './EventDetails';
+export { default as EventForm } from './EventForm';
+export { default as AdminEventList } from './AdminEventList';
+export { default as UserRegistrations } from './UserRegistrations';
+export { default as UserCertificates } from './UserCertificates';
+export { default as UserManagement } from './UserManagement';
+export { default as EventStats } from './EventStats';
+export { default as EventRegistrations } from './EventRegistrations';
+export { default as EventCertificates } from './EventCertificates';
+export { default as EventRegister } from './EventRegister';

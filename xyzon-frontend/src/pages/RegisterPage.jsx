@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { FiMail, FiLock, FiUser, FiEye, FiEyeOff, FiAlertCircle } from 'react-icons/fi';
@@ -9,6 +9,15 @@ export default function RegisterPage() {
     const [form, setForm] = useState({ name: '', email: '', password: '' });
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
+
+    // Add auth page class to body to prevent header padding
+    useEffect(() => {
+        document.body.classList.add('auth-page');
+        return () => {
+            document.body.classList.remove('auth-page');
+        };
+    }, []);
+
     const onChange = e => setForm(f => ({ ...f, [e.target.name]: e.target.value }));
     const submit = async e => { e.preventDefault(); setLoading(true); try { await register(form); navigate('/'); } catch { } finally { setLoading(false); } };
     const [showPwd, setShowPwd] = useState(false);

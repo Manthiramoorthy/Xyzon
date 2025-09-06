@@ -1,56 +1,166 @@
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000/api';
+import { authApiService, tokenUtils } from '../api/authApi';
 
-let accessToken = null; // in-memory for security
+// Token management
+export function getAccessToken() {
+    return tokenUtils.getAccessToken();
+}
 
-function setAccessToken(token) { accessToken = token; }
-export function getAccessToken() { return accessToken; }
+export function setAccessToken(token) {
+    tokenUtils.setTokens(token, tokenUtils.getRefreshToken());
+}
 
-async function jsonFetch(path, { method = 'GET', body, auth } = {}) {
-    const headers = { 'Content-Type': 'application/json' };
-    if (auth && accessToken) headers['Authorization'] = 'Bearer ' + accessToken;
-    const res = await fetch(API_BASE + path, { method, headers, body: body ? JSON.stringify(body) : undefined });
-    if (res.status === 401 && auth) {
-        // try refresh
-        const refreshed = await tryRefresh();
-        if (refreshed) {
-            headers['Authorization'] = 'Bearer ' + accessToken;
-            const retry = await fetch(API_BASE + path, { method, headers, body: body ? JSON.stringify(body) : undefined });
-            return handleJson(retry);
+// Authentication service functions
+export async function register(userData) {
+    try {
+        const response = await authApiService.register(userData);
+        return response.data;
+    } catch (error) {
+        throw new Error(error.response?.data?.message || 'Registration failed');
+    }
+}
+
+export async function login(credentials) {
+    try {
+        const response = await authApiService.login(credentials);
+        const { user, accessToken, refreshToken } = response.data;
+
+        // Store tokens
+        tokenUtils.setTokens(accessToken, refreshToken);
+
+        return user;
+    } catch (error) {
+        throw new Error(error.response?.data?.message || 'Login failed');
+    }
+}
+
+export async function logout() {
+    try {
+        const refreshToken = tokenUtils.getRefreshToken();
+        if (refreshToken) {
+            await authApiService.logout(refreshToken);
+        }
+    } catch (error) {
+        // Continue with logout even if API call fails
+        console.warn('Logout API call failed:', error);
+    } finally {
+        // Always clear tokens
+        tokenUtils.clearTokens();
+    }
+}
+
+export async function getMe() {
+    // Don't make API call if there's no access token
+    const token = getAccessToken();
+    if (!token) {
+        throw new Error('No access token available');
+    }
+
+    try {
+        const response = await authApiService.getMe();
+        return response.data;
+    } catch (error) {
+        throw new Error(error.response?.data?.message || 'Failed to get user info');
+    }
+}
+
+export async function forgotPassword(email) {
+    try {
+        const response = await authApiService.forgotPassword(email);
+        return response.data;
+    } catch (error) {
+        throw new Error(error.response?.data?.message || 'Password reset request failed');
+    }
+}
+
+export async function resetPassword(resetData) {
+    try {
+        const response = await authApiService.resetPassword(resetData);
+        return response.data;
+    } catch (error) {
+        throw new Error(error.response?.data?.message || 'Password reset failed');
+    }
+}
+
+export async function changePassword(passwordData) {
+    try {
+        const response = await authApiService.changePassword(passwordData);
+        return response.data;
+    } catch (error) {
+        throw new Error(error.response?.data?.message || 'Password change failed');
+    }
+}
+
+export async function updateProfile(profileData) {
+    try {
+        const response = await authApiService.updateProfile(profileData);
+        return response.data;
+    } catch (error) {
+        throw new Error(error.response?.data?.message || 'Profile update failed');
+    }
+}
+
+export async function bootstrapAuth() {
+    const refreshToken = tokenUtils.getRefreshToken();
+    const accessToken = tokenUtils.getAccessToken();
+
+    // If we have a valid access token, we're good
+    if (accessToken && tokenUtils.isTokenValid(accessToken)) {
+        return true;
+    }
+
+    // If we have a refresh token, try to refresh
+    if (refreshToken) {
+        try {
+            const response = await authApiService.refreshToken(refreshToken);
+            const { accessToken, refreshToken: newRefreshToken } = response.data;
+            tokenUtils.setTokens(accessToken, newRefreshToken);
+            return true;
+        } catch (error) {
+            // Refresh failed, clear all tokens
+            tokenUtils.clearTokens();
+            return false;
         }
     }
-    return handleJson(res);
+
+    // No valid tokens
+    return false;
 }
 
-async function handleJson(res) {
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.error || 'Request failed');
-    return data;
+// Utility functions
+export function isAuthenticated() {
+    const token = tokenUtils.getAccessToken();
+    return token && tokenUtils.isTokenValid(token);
 }
 
-function storeRefresh(token) { localStorage.setItem('rt', token); }
-function getRefresh() { return localStorage.getItem('rt'); }
-function clearRefresh() { localStorage.removeItem('rt'); }
+export function getUserRole() {
+    const token = tokenUtils.getAccessToken();
+    if (!token) return null;
 
-async function tryRefresh() {
-    const rt = getRefresh();
-    if (!rt) return false;
-    try {
-        const data = await jsonFetch('/auth/refresh', { method: 'POST', body: { refreshToken: rt } });
-        setAccessToken(data.accessToken);
-        storeRefresh(data.refreshToken);
-        return true;
-    } catch { clearRefresh(); accessToken = null; return false; }
+    const payload = tokenUtils.getTokenPayload(token);
+    return payload?.role || null;
 }
 
-export async function register(payload) { return jsonFetch('/auth/register', { method: 'POST', body: payload }); }
-export async function login(payload) {
-    const data = await jsonFetch('/auth/login', { method: 'POST', body: payload });
-    setAccessToken(data.accessToken); storeRefresh(data.refreshToken); return data.user;
-}
-export async function logout() { const rt = getRefresh(); if (rt) { await jsonFetch('/auth/logout', { method: 'POST', body: { refreshToken: rt } }).catch(() => { }); } clearRefresh(); accessToken = null; }
-export async function getMe() { return jsonFetch('/auth/me', { auth: true }); }
-export async function forgotPassword(email) { return jsonFetch('/auth/forgot-password', { method: 'POST', body: { email } }); }
-export async function resetPassword(payload) { return jsonFetch('/auth/reset-password', { method: 'POST', body: payload }); }
-export async function bootstrapAuth() { if (getRefresh()) await tryRefresh(); }
+export function getUserId() {
+    const token = tokenUtils.getAccessToken();
+    if (!token) return null;
 
-export default { login, register, logout, getMe, forgotPassword, resetPassword, bootstrapAuth, getAccessToken };
+    const payload = tokenUtils.getTokenPayload(token);
+    return payload?.userId || payload?.id || null;
+}
+
+// Export default service object
+export default {
+    login,
+    register,
+    logout,
+    getMe,
+    forgotPassword,
+    resetPassword,
+    changePassword,
+    updateProfile,
+    bootstrapAuth,
+    getAccessToken,
+    isAuthenticated,
+    getUserRole,
+    getUserId
+};

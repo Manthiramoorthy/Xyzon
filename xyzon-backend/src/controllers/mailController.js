@@ -1,4 +1,4 @@
-const { sendMailService, getTemplateService, sendPersonalizedBulkService } = require('../services/mailService');
+const { sendMailService, sendPersonalizedBulkService, sendEventRegistrationConfirmation, sendEventReminder, sendCertificateEmail } = require('../services/mailService');
 
 // POST /send-email: send personalized emails to a list using a template and attachments
 const sendPersonalizedBulkController = async (req, res) => {

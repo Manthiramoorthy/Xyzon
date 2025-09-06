@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { FiMail, FiLock, FiEye, FiEyeOff, FiAlertCircle } from 'react-icons/fi';
 import '../auth/authStyles.css';
@@ -9,9 +9,38 @@ export default function LoginPage() {
     const [form, setForm] = useState({ email: '', password: '' });
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
+    const location = useLocation();
+
+    // Add auth page class to body to prevent header padding
+    useEffect(() => {
+        document.body.classList.add('auth-page');
+        return () => {
+            document.body.classList.remove('auth-page');
+        };
+    }, []);
+
     const onChange = e => setForm(f => ({ ...f, [e.target.name]: e.target.value }));
-    const submit = async e => { e.preventDefault(); setLoading(true); try { const u = await login(form.email, form.password); navigate(u.role === 'admin' ? '/admin/certificate' : '/user/certificate'); } catch { } finally { setLoading(false); } };
-    useEffect(() => { if (user) { navigate(user.role === 'admin' ? '/admin/certificate' : '/user/certificate', { replace: true }); } }, [user, navigate]);
+    const submit = async e => {
+        e.preventDefault();
+        setLoading(true);
+        try {
+            const u = await login(form.email, form.password);
+            // Don't navigate here, let the useEffect handle it
+        } catch {
+            // Error is handled by AuthContext
+        } finally {
+            setLoading(false);
+        }
+    };
+    useEffect(() => {
+        if (user) {
+            const targetPath = user.role === 'admin' ? '/admin/events' : '/user/registrations';
+            // Only navigate if we're not already on the target path
+            if (location.pathname !== targetPath) {
+                navigate(targetPath, { replace: true });
+            }
+        }
+    }, [user, navigate, location.pathname]);
     const [showPwd, setShowPwd] = useState(false);
     return (
         <div className="auth-page-root fade-in">

@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Certificate of Completion</title>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Inter:wght@300;400;500;600&display=swap");
+
+      body {
+        margin: 0;
+        padding: 20px;
+        font-family: "Inter", sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .certificate {
+        background: white;
+        width: 800px;
+        height: 600px;
+        padding: 40px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+        border-radius: 10px;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .certificate::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: radial-gradient(
+            circle at 20% 20%,
+            rgba(102, 126, 234, 0.1) 0%,
+            transparent 50%
+          ),
+          radial-gradient(
+            circle at 80% 80%,
+            rgba(118, 75, 162, 0.1) 0%,
+            transparent 50%
+          );
+        pointer-events: none;
+      }
+
+      .header {
+        text-align: center;
+        margin-bottom: 30px;
+      }
+
+      .title {
+        font-family: "Playfair Display", serif;
+        font-size: 42px;
+        font-weight: 700;
+        color: #2d3748;
+        margin: 0;
+        letter-spacing: -1px;
+      }
+
+      .subtitle {
+        font-size: 18px;
+        color: #718096;
+        margin: 10px 0 0 0;
+        font-weight: 300;
+      }
+
+      .content {
+        text-align: center;
+        margin: 40px 0;
+      }
+
+      .awarded-to {
+        font-size: 16px;
+        color: #4a5568;
+        margin-bottom: 15px;
+        font-weight: 500;
+      }
+
+      .recipient-name {
+        font-family: "Playfair Display", serif;
+        font-size: 36px;
+        font-weight: 700;
+        color: #667eea;
+        margin: 0 0 30px 0;
+        padding: 0 20px;
+        border-bottom: 2px solid #e2e8f0;
+        padding-bottom: 15px;
+        display: inline-block;
+      }
+
+      .completion-text {
+        font-size: 16px;
+        color: #4a5568;
+        line-height: 1.6;
+        margin: 20px auto;
+        max-width: 500px;
+      }
+
+      .event-name {
+        font-family: "Playfair Display", serif;
+        font-size: 24px;
+        font-weight: 600;
+        color: #2d3748;
+        margin: 20px 0;
+      }
+
+      .footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+        margin-top: 60px;
+        border-top: 1px solid #e2e8f0;
+        padding-top: 30px;
+      }
+
+      .date-section,
+      .signature-section {
+        text-align: center;
+        flex: 1;
+      }
+
+      .date-label,
+      .signature-label {
+        font-size: 12px;
+        color: #718096;
+        margin-bottom: 5px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+
+      .date-value,
+      .signature-value {
+        font-size: 14px;
+        color: #2d3748;
+        font-weight: 500;
+      }
+
+      .certificate-id {
+        position: absolute;
+        bottom: 20px;
+        right: 20px;
+        font-size: 10px;
+        color: #a0aec0;
+        font-family: monospace;
+      }
+
+      .qr-code {
+        position: absolute;
+        bottom: 20px;
+        left: 20px;
+        width: 60px;
+        height: 60px;
+        opacity: 0.7;
+      }
+
+      .decorative-border {
+        position: absolute;
+        top: 20px;
+        left: 20px;
+        right: 20px;
+        bottom: 20px;
+        border: 2px solid transparent;
+        background: linear-gradient(white, white) padding-box,
+          linear-gradient(45deg, #667eea, #764ba2) border-box;
+        border-radius: 8px;
+        pointer-events: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="certificate">
+      <div class="decorative-border"></div>
+
+      <div class="header">
+        <h1 class="title">Certificate of Completion</h1>
+        <p class="subtitle">This is to certify that</p>
+      </div>
+
+      <div class="content">
+        <div class="recipient-name">{{recipientName}}</div>
+
+        <div class="completion-text">has successfully completed the</div>
+
+        <div class="event-name">{{eventName}}</div>
+
+        <div class="completion-text">
+          held on {{eventDate}} and has demonstrated commitment to professional
+          development and learning excellence.
+        </div>
+      </div>
+
+      <div class="footer">
+        <div class="date-section">
+          <div class="date-label">Date Issued</div>
+          <div class="date-value">{{issueDate}}</div>
+        </div>
+
+        <div class="signature-section">
+          <div class="signature-label">Organized By</div>
+          <div class="signature-value">{{organizerName}}</div>
+        </div>
+      </div>
+
+      <div class="certificate-id">Certificate ID: {{certificateId}}</div>
+      <img src="{{qrCode}}" alt="Verification QR Code" class="qr-code" />
+    </div>
+  </body>
+</html>
