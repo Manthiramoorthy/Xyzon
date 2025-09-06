@@ -203,14 +203,6 @@ export default function EventDetails() {
 
     return (
         <div className="container py-4">
-            {/* Back button */}
-            <button
-                className="btn btn-outline-secondary mb-4"
-                onClick={() => navigate('/events')}
-            >
-                <FaArrowLeft className="me-2" />
-                Back to Events
-            </button>
 
             <div className="row">
                 {/* Event Details */}

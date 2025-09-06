@@ -8,7 +8,7 @@ import {
     FaCheckCircle
 } from 'react-icons/fa';
 
-const EventCard = ({ event, onRegister, userRegistrations = [] }) => {
+export const EventCard = ({ event, onRegister, userRegistrations = [] }) => {
     const isUpcoming = new Date(event.startDate) > new Date();
     const isRegistrationOpen = new Date(event.registrationEndDate) > new Date() &&
         new Date(event.registrationStartDate) <= new Date();
@@ -199,21 +199,19 @@ export default function EventList() {
         );
     }
 
+
+    // Separate upcoming and past events
+    const now = new Date();
+    const upcomingEvents = events && events.length > 0
+        ? events.filter(ev => new Date(ev.startDate) > now)
+        : [];
+    const pastEvents = events && events.length > 0
+        ? events.filter(ev => new Date(ev.startDate) <= now)
+        : [];
+
     return (
         <div className="container py-4">
-            {/* Header */}
-            <div className="row mb-4">
-                <div className="col-12">
-                    <h1 className="fw-bold text-center mb-4">
-                        <FaCalendarAlt className="text-primary me-3" />
-                        Upcoming Events
-                    </h1>
-                    <p className="text-center text-muted mb-4">
-                        Discover amazing events and expand your knowledge with our community
-                    </p>
-                </div>
-            </div>
-
+        
             {/* Search and Filters */}
             <div className="row mb-4">
                 <div className="col-12">
@@ -319,14 +317,14 @@ export default function EventList() {
             )}
 
             <div className="row">
-                {events.length === 0 && !loading ? (
+                {upcomingEvents.length === 0 && !loading ? (
                     <div className="col-12 text-center py-5">
                         <FaCalendarAlt size={64} className="text-muted mb-3" />
-                        <h4 className="text-muted">No events found</h4>
+                        <h4 className="text-muted">No upcoming events found</h4>
                         <p className="text-muted">Try adjusting your search criteria or check back later for new events.</p>
                     </div>
                 ) : (
-                    events.map(event => (
+                    upcomingEvents.map(event => (
                         <div key={event._id} className="col-lg-4 col-md-6 mb-4">
                             <EventCard
                                 event={event}
@@ -342,6 +340,26 @@ export default function EventList() {
                 <div className="text-center py-3">
                     <div className="spinner-border text-primary" role="status">
                         <span className="visually-hidden">Loading more events...</span>
+                    </div>
+                </div>
+            )}
+
+            {/* Past Events Section */}
+            {pastEvents.length > 0 && (
+                <div className="row mt-5">
+                    <div className="col-12">
+                        <h4 className="fw-bold mb-3 text-secondary">Past Events</h4>
+                        <div className="row">
+                            {pastEvents.map(ev => (
+                                <div key={ev._id} className="col-lg-4 col-md-6 mb-4">
+                                    <EventCard
+                                        event={ev}
+                                        onRegister={handleRegister}
+                                        userRegistrations={userRegistrations}
+                                    />
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 </div>
             )}

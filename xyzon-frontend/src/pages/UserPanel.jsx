@@ -13,11 +13,10 @@ export default function UserPanel() {
         setItems([
             { to: '/user/registrations', label: 'My Event Registrations', icon: <FiUsers /> },
             { to: '/user/certificates', label: 'My Certificates', icon: <FiAward /> },
-            { to: '/user/certificate', label: 'Certificate Generator', icon: <FiFileText /> },
             { action: logout, label: 'Logout', icon: <FiLogOut />, isAction: true },
         ]);
     }, [setItems, logout]);
 
     useEffect(() => { /* path change rerender */ }, [loc.pathname]);
-    return <main style={{ padding: '90px 1.2rem 2rem 1.2rem' }}><Outlet /></main>;
+    return <main style={{ padding: '30px 1.2rem 2rem 1.2rem' }}><Outlet /></main>;
 }

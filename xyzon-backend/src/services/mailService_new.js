@@ -238,7 +238,7 @@ const sendCertificateEmail = async (certificate, registration, event) => {
             </div>
             
             <div style="text-align: center; margin: 30px 0;">
-                <a href="${process.env.FRONTEND_URL}/certificates/${certificate.certificateId}" 
+                <a href="${process.env.FRONTEND_URL}/user/certificates" 
                    style="display: inline-block; padding: 12px 30px; background-color: #4caf50; color: #ffffff; text-decoration: none; border-radius: 5px; font-weight: bold; margin: 5px;">
                     Download Certificate
                 </a>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { eventApi } from '../api/eventApi';
+import { getTemplates } from '../api/certificateTemplateApi';
 import {
     FaSave, FaArrowLeft, FaCalendarAlt, FaImage, FaPlus, FaTrash,
     FaInfoCircle, FaTicketAlt, FaMapMarkerAlt, FaCertificate,
@@ -33,15 +34,25 @@ export default function EventForm() {
         category: 'Technology',
         tags: [],
         hasCertificate: false,
+        certificateTemplateId: '',
         status: 'draft',
         registrationQuestions: []
     });
-
+    const [certificateTemplates, setCertificateTemplates] = useState([]);
     const [tagInput, setTagInput] = useState('');
     const [bannerFile, setBannerFile] = useState(null);
     const [imageFiles, setImageFiles] = useState([]);
 
     useEffect(() => {
+        async function fetchCertTemplates() {
+            try {
+                const res = await getTemplates();
+                setCertificateTemplates(res.data || res.templates || []);
+            } catch (e) {
+                setCertificateTemplates([]);
+            }
+        }
+        fetchCertTemplates();
         if (isEdit) {
             loadEvent();
         } else {
@@ -75,7 +86,8 @@ export default function EventForm() {
                 registrationStartDate: new Date(event.registrationStartDate).toISOString().slice(0, 16),
                 registrationEndDate: new Date(event.registrationEndDate).toISOString().slice(0, 16),
                 tags: event.tags || [],
-                registrationQuestions: event.registrationQuestions || []
+                registrationQuestions: event.registrationQuestions || [],
+                certificateTemplateId: event.certificateTemplateId?._id || ''
             });
         } catch (error) {
             setError(error.response?.data?.message || 'Failed to load event');
@@ -174,11 +186,15 @@ export default function EventForm() {
             }
 
             let eventData;
+            const payload = {
+                ...formData,
+                certificateTemplateId: formData.hasCertificate ? formData.certificateTemplateId : ''
+            };
             if (isEdit) {
-                const response = await eventApi.updateEvent(id, formData);
+                const response = await eventApi.updateEvent(id, payload);
                 eventData = response.data.data;
             } else {
-                const response = await eventApi.createEvent(formData);
+                const response = await eventApi.createEvent(payload);
                 eventData = response.data.data;
             }
 
@@ -432,6 +448,22 @@ export default function EventForm() {
                                         Issue certificates to attendees
                                     </label>
                                 </div>
+                                {formData.hasCertificate && (
+                                    <div className="mb-3">
+                                        <label className="form-label fw-bold">Certificate Template *</label>
+                                        <select
+                                            className="form-select"
+                                            value={formData.certificateTemplateId}
+                                            onChange={e => handleInputChange('certificateTemplateId', e.target.value)}
+                                            required
+                                        >
+                                            <option value="">Select a template</option>
+                                            {certificateTemplates.map(tpl => (
+                                                <option key={tpl._id} value={tpl._id}>{tpl.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                )}
                             </div>
                         </div>
 

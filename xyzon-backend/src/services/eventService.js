@@ -56,7 +56,8 @@ class EventService {
             limit: 10,
             sort: { createdAt: -1 },
             populate: [
-                { path: 'createdBy', select: 'name email' }
+                { path: 'createdBy', select: 'name email' },
+                { path: 'certificateTemplateId', select: 'name _id' }
             ]
         };
 
@@ -71,6 +72,10 @@ class EventService {
 
         let event = Event.findOne(query);
 
+        // Always populate certificateTemplateId
+        if (!populateFields.some(f => (typeof f === 'string' && f === 'certificateTemplateId') || (f.path && f.path === 'certificateTemplateId'))) {
+            populateFields.push({ path: 'certificateTemplateId', select: 'name _id' });
+        }
         if (populateFields.length > 0) {
             event = event.populate(populateFields);
         }

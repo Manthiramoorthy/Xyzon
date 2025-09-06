@@ -55,7 +55,8 @@ const eventSchema = new mongoose.Schema({
 
     // Certificate
     hasCertificate: { type: Boolean, default: false },
-    certificateTemplate: { type: String }, // Template HTML
+    certificateTemplate: { type: String }, // (legacy) Template HTML
+    certificateTemplateId: { type: mongoose.Schema.Types.ObjectId, ref: 'CertificateTemplate' }, // NEW: Reference to template
     certificateIssued: { type: Boolean, default: false },
 
     // Admin and Metadata
