@@ -103,7 +103,12 @@ export function AuthProvider({ children }) {
         localStorage.removeItem('u');
     }, []);
 
-    const value = { user, loading, error, login, register, logout };
+    const updateUserData = useCallback((userData) => {
+        setUser(userData);
+        localStorage.setItem('u', JSON.stringify(userData));
+    }, []);
+
+    const value = { user, loading, error, login, register, logout, updateUserData };
     return (
         <AuthContext.Provider value={value}>
             {children}

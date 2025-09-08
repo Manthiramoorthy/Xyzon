@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { eventApi } from '../api/eventApi';
+import { useToast } from '../context/ToastContext';
 import { Link } from 'react-router-dom';
 import {
     FaPlus, FaEdit, FaTrash, FaEye, FaUsers, FaCalendarAlt,
@@ -142,6 +143,8 @@ const EventCard = ({ event, onEdit, onDelete, onViewStats, onSendReminders }) =>
 };
 
 export default function AdminEventList() {
+    const { toast, confirm } = useToast();
+
     const [events, setEvents] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -185,13 +188,14 @@ export default function AdminEventList() {
     };
 
     const handleDelete = async (event) => {
-        if (window.confirm(`Are you sure you want to delete "${event.title}"?`)) {
+        const confirmed = await confirm(`Are you sure you want to delete "${event.title}"?`);
+        if (confirmed) {
             try {
                 await eventApi.deleteEvent(event._id);
                 setEvents(prev => prev.filter(e => e._id !== event._id));
-                alert('Event deleted successfully');
+                toast.success('Event deleted successfully');
             } catch (error) {
-                alert(error.response?.data?.message || 'Failed to delete event');
+                toast.error(error.response?.data?.message || 'Failed to delete event');
             }
         }
     };
@@ -201,12 +205,13 @@ export default function AdminEventList() {
     };
 
     const handleSendReminders = async (event) => {
-        if (window.confirm(`Send reminder emails to all registered participants for "${event.title}"?`)) {
+        const confirmed = await confirm(`Send reminder emails to all registered participants for "${event.title}"?`);
+        if (confirmed) {
             try {
                 await eventApi.sendEventReminders(event._id);
-                alert('Reminder emails sent successfully');
+                toast.success('Reminder emails sent successfully');
             } catch (error) {
-                alert(error.response?.data?.message || 'Failed to send reminders');
+                toast.error(error.response?.data?.message || 'Failed to send reminders');
             }
         }
     };

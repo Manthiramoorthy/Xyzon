@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useToast } from '../context/ToastContext';
 import { eventApi } from '../api/eventApi';
 import { getTemplates } from '../api/certificateTemplateApi';
 import {
@@ -11,6 +12,8 @@ import {
 export default function EventForm() {
     const { id } = useParams();
     const navigate = useNavigate();
+    const { toast } = useToast();
+
     const isEdit = Boolean(id);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -215,7 +218,7 @@ export default function EventForm() {
                 }
             }
 
-            alert(isEdit ? 'Event updated successfully!' : 'Event created successfully!');
+            toast.success(isEdit ? 'Event updated successfully!' : 'Event created successfully!');
             navigate('/admin/events');
         } catch (error) {
             setError(error.message || error.response?.data?.message || 'Failed to save event');

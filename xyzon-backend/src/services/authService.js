@@ -25,8 +25,13 @@ async function register({ name, email, password }) {
 async function login({ email, password }) {
     const user = await User.findOne({ email });
     if (!user) throw new Error('INVALID_CREDENTIALS');
+    if (!user.isActive) throw new Error('ACCOUNT_SUSPENDED');
     const ok = await bcrypt.compare(password, user.passwordHash);
     if (!ok) throw new Error('INVALID_CREDENTIALS');
+
+    // Update last login
+    user.lastLogin = new Date();
+
     const accessToken = signAccess(user);
     const refreshToken = signRefresh();
     user.refreshTokens.push({ token: refreshToken });

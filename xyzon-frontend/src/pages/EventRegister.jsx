@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
+import { useToast } from '../context/ToastContext';
 import { eventApi, registrationApi } from '../api/eventApi';
 import {
     FaArrowLeft, FaCalendarAlt, FaClock, FaMapMarkerAlt,
@@ -12,6 +13,8 @@ export default function EventRegister() {
     const { id } = useParams();
     const navigate = useNavigate();
     const { user } = useAuth();
+    const { toast } = useToast();
+
     const [event, setEvent] = useState(null);
     const [loading, setLoading] = useState(true);
     const [registering, setRegistering] = useState(false);
@@ -114,7 +117,7 @@ export default function EventRegister() {
 
                 if (!orderId) {
                     console.error('No order ID found in response:', orderResponse);
-                    window.toast && window.toast.error ? window.toast.error('Failed to create payment order. Please try again.') : alert('Failed to create payment order. Please try again.');
+                    toast.error('Failed to create payment order. Please try again.');
                     return;
                 }
 
@@ -122,8 +125,8 @@ export default function EventRegister() {
                     key: import.meta.env.VITE_RAZORPAY_KEY_ID,
                     amount: event.price * 100, // Always use event.price * 100 for display
                     currency: orderResponse.data.currency,
-                    name: 'Xyzon Events',
-                    description: event.title,
+                    name: `Xyzon Events - ${event.title}`,
+                    description: event.shortDescription || event.title,
                     order_id: orderId,
                     handler: async (response) => {
                         try {
@@ -136,7 +139,7 @@ export default function EventRegister() {
                                     payment_id: response.razorpay_payment_id,
                                     signature: response.razorpay_signature
                                 });
-                                window.toast && window.toast.error ? window.toast.error('Payment incomplete. Missing verification data.') : alert('Payment incomplete. Missing verification data.');
+                                toast.error('Payment incomplete. Missing verification data.');
                                 return;
                             }
 
@@ -153,11 +156,11 @@ export default function EventRegister() {
                                 razorpay_order_id: response.razorpay_order_id
                             });
 
-                            window.toast && window.toast.success ? window.toast.success('Registration successful! You will receive a confirmation email shortly.') : alert('Registration successful! You will receive a confirmation email shortly.');
+                            toast.success('Registration successful! You will receive a confirmation email shortly.');
                             navigate('/user/registrations');
                         } catch (error) {
                             console.log(error)
-                            window.toast && window.toast.error ? window.toast.error('Payment verification or registration failed. Please try again.') : alert('Payment verification or registration failed. Please try again.');
+                            toast.error('Payment verification or registration failed. Please try again.');
                         }
                     },
                     prefill: {
@@ -170,7 +173,7 @@ export default function EventRegister() {
                     },
                     modal: {
                         ondismiss: () => {
-                            window.toast && window.toast.info ? window.toast.info('Payment cancelled.') : alert('Payment cancelled.');
+                            toast.info('Payment cancelled.');
                         }
                     }
                 };
@@ -179,12 +182,12 @@ export default function EventRegister() {
             } else {
                 // Free event registration
                 await registrationApi.registerForEvent(event._id, registrationData);
-                window.toast && window.toast.success ? window.toast.success('Registration successful! You will receive a confirmation email shortly.') : alert('Registration successful! You will receive a confirmation email shortly.');
+                toast.success('Registration successful! You will receive a confirmation email shortly.');
                 navigate('/user/registrations');
             }
         } catch (error) {
             console.log(error);
-            window.toast && window.toast.error ? window.toast.error(error.response?.data?.message || 'Registration failed. Please try again.') : alert(error.response?.data?.message || 'Registration failed. Please try again.');
+            toast.error(error.response?.data?.message || 'Registration failed. Please try again.');
         } finally {
             setRegistering(false);
         }

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useEvent } from '../context/EventContext';
 import { useAuth } from '../auth/AuthContext';
+import { useToast } from '../context/ToastContext';
 import {
     FaCalendarAlt, FaClock, FaMapMarkerAlt, FaUsers, FaTag,
     FaTicketAlt, FaGlobe, FaWifi, FaArrowLeft, FaShare,
@@ -12,6 +13,7 @@ export default function EventDetails() {
     const { id } = useParams();
     const navigate = useNavigate();
     const { user } = useAuth();
+    const { toast } = useToast();
     const { fetchEvent, registerForEvent, createRazorpayOrder, verifyPayment, loading, error } = useEvent();
     const [event, setEvent] = useState(null);
     const [showRegistrationForm, setShowRegistrationForm] = useState(false);
@@ -106,8 +108,8 @@ export default function EventDetails() {
                     key: import.meta.env.VITE_RAZORPAY_KEY_ID,
                     amount: orderData.amount,
                     currency: orderData.currency,
-                    name: 'Xyzon Events',
-                    description: event.title,
+                    name: `Xyzon Events - ${event.title}`,
+                    description: event.shortDescription || event.title,
                     order_id: orderData.id,
                     handler: async (response) => {
                         try {
@@ -119,10 +121,10 @@ export default function EventDetails() {
                                 registrationData
                             });
 
-                            alert('Registration successful! You will receive a confirmation email shortly.');
+                            toast.success('Registration successful! You will receive a confirmation email shortly.');
                             navigate('/user/registrations');
                         } catch (error) {
-                            alert('Payment verification failed. Please try again.');
+                            toast.error('Payment verification failed. Please try again.');
                         }
                     },
                     prefill: {
@@ -140,11 +142,11 @@ export default function EventDetails() {
             } else {
                 // Free event registration
                 await registerForEvent(event._id, registrationData);
-                alert('Registration successful! You will receive a confirmation email shortly.');
+                toast.success('Registration successful! You will receive a confirmation email shortly.');
                 navigate('/user/registrations');
             }
         } catch (error) {
-            alert(error.response?.data?.message || 'Registration failed. Please try again.');
+            toast.error(error.response?.data?.message || 'Registration failed. Please try again.');
         } finally {
             setRegistering(false);
         }
@@ -169,7 +171,7 @@ export default function EventDetails() {
             });
         } else {
             navigator.clipboard.writeText(url);
-            alert('Event link copied to clipboard!');
+            toast.success('Event link copied to clipboard!');
         }
     };
 

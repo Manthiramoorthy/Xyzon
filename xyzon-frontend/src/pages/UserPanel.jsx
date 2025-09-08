@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { useMenu } from '../context/MenuContext';
 import { useAuth } from '../auth/AuthContext';
-import { FiFileText, FiCalendar, FiUsers, FiAward, FiCreditCard, FiLogOut } from 'react-icons/fi';
+import { FiFileText, FiCalendar, FiUsers, FiAward, FiCreditCard, FiLogOut, FiUser } from 'react-icons/fi';
 
 export default function UserPanel() {
     const { setItems } = useMenu();
@@ -14,6 +14,7 @@ export default function UserPanel() {
             { to: '/user/registrations', label: 'My Event Registrations', icon: <FiUsers /> },
             { to: '/user/payments', label: 'My Payment History', icon: <FiCreditCard /> },
             { to: '/user/certificates', label: 'My Certificates', icon: <FiAward /> },
+            { to: '/user/profile', label: 'My Profile', icon: <FiUser /> },
             { action: logout, label: 'Logout', icon: <FiLogOut />, isAction: true },
         ]);
     }, [setItems, logout]);

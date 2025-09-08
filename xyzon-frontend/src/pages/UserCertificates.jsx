@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { certificateApi } from '../api/eventApi';
 import { useAuth } from '../auth/AuthContext';
-import { generateCertificatePDF, previewCertificate } from '../utils/certificateUtils';
+import { useToast } from '../context/ToastContext';
+import { generateCertificatePDF } from '../utils/certificateUtils';
 import {
-    FaCertificate, FaDownload, FaEye, FaCalendarAlt, FaUser, FaSpinner, FaFilePdf
+    FaCertificate, FaCalendarAlt, FaUser, FaSpinner, FaFilePdf
 } from 'react-icons/fa';
 
 export default function UserCertificates() {
-    const { user } = useAuth();
-    const navigate = useNavigate();
+    const { toast } = useToast();
+
     const [certificates, setCertificates] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -29,20 +30,6 @@ export default function UserCertificates() {
             setError(error.response?.data?.message || 'Failed to load certificates');
         } finally {
             setLoading(false);
-        }
-    };
-
-    const handleViewCertificate = async (certificate) => {
-        try {
-            if (certificate.generatedHtml) {
-                previewCertificate(certificate.generatedHtml);
-            } else {
-                // Fallback: navigate to certificate view page
-                navigate(`/certificates/${certificate.certificateId}`);
-            }
-        } catch (error) {
-            console.error('Error viewing certificate:', error);
-            alert('Failed to view certificate: ' + error.message);
         }
     };
 
@@ -72,7 +59,7 @@ export default function UserCertificates() {
             console.log('PDF generated and downloaded successfully');
         } catch (error) {
             console.error('Error downloading certificate:', error);
-            alert('Failed to download certificate as PDF. Please ensure all images are accessible and try again.\nError: ' + error.message);
+            toast.error('Failed to download certificate as PDF. Please ensure all images are accessible and try again.\nError: ' + error.message);
         } finally {
             setDownloadingCert(null);
         }
@@ -139,7 +126,7 @@ export default function UserCertificates() {
                 <div className="row">
                     {certificates.map(certificate => (
                         <div key={certificate.certificateId} className="col-lg-6 col-xl-4 mb-4">
-                            <div className="card h-100 shadow-sm border-0">
+                            <div className="card h-100 shadow-sm border-0" style={{ minHeight: '320px' }}>
                                 <div className="card-header bg-primary text-white">
                                     <div className="d-flex align-items-center justify-content-between">
                                         <FaCertificate className="fs-4" />
@@ -148,65 +135,60 @@ export default function UserCertificates() {
                                         </span>
                                     </div>
                                 </div>
-                                <div className="card-body">
-                                    <h5 className="card-title text-primary">
+                                <div className="card-body d-flex flex-column">
+                                    <h5 className="card-title text-primary mb-3" style={{
+                                        minHeight: '50px',
+                                        display: 'flex',
+                                        alignItems: 'center'
+                                    }}>
                                         {certificate.title}
                                     </h5>
 
-                                    <div className="mb-3">
+                                    <div className="mb-3 flex-grow-1">
                                         <div className="d-flex align-items-center mb-2">
-                                            <FaUser className="me-2 text-muted" />
+                                            <FaUser className="me-2 text-muted flex-shrink-0" />
                                             <small className="text-muted">
                                                 Recipient: <strong>{certificate.recipientName}</strong>
                                             </small>
                                         </div>
                                         <div className="d-flex align-items-center mb-2">
-                                            <FaCalendarAlt className="me-2 text-muted" />
+                                            <FaCalendarAlt className="me-2 text-muted flex-shrink-0" />
                                             <small className="text-muted">
-                                                Event: {certificate.event?.title}
+                                                Event: <strong>{certificate.event?.title || 'N/A'}</strong>
                                             </small>
                                         </div>
                                         <div className="d-flex align-items-center">
-                                            <FaCalendarAlt className="me-2 text-muted" />
+                                            <FaCalendarAlt className="me-2 text-muted flex-shrink-0" />
                                             <small className="text-muted">
-                                                Issued: {formatDate(certificate.issueDate)}
+                                                Issued: <strong>{formatDate(certificate.issueDate)}</strong>
                                             </small>
                                         </div>
                                     </div>
 
-                                    <div className="border-top pt-3">
-                                        <div className="d-flex gap-2">
-                                            <button
-                                                className="btn btn-primary btn-sm flex-grow-1"
-                                                onClick={() => handleViewCertificate(certificate)}
-                                            >
-                                                <FaEye className="me-1" />
-                                                View
-                                            </button>
-                                            <button
-                                                className="btn btn-success btn-sm flex-grow-1"
-                                                onClick={() => handleDownloadCertificate(certificate)}
-                                                disabled={downloadingCert === certificate._id}
-                                            >
-                                                {downloadingCert === certificate._id ? (
-                                                    <>
-                                                        <FaSpinner className="spinner-border spinner-border-sm me-1" />
-                                                        Generating...
-                                                    </>
-                                                ) : (
-                                                    <>
-                                                        <FaFilePdf className="me-1" />
-                                                        Download PDF
-                                                    </>
-                                                )}
-                                            </button>
-                                        </div>
+                                    <div className="border-top pt-3 mt-auto">
+                                        <button
+                                            className="btn btn-success w-100"
+                                            onClick={() => handleDownloadCertificate(certificate)}
+                                            disabled={downloadingCert === certificate._id}
+                                        >
+                                            {downloadingCert === certificate._id ? (
+                                                <>
+                                                    <FaSpinner className="spinner-border spinner-border-sm me-2" />
+                                                    Generating PDF...
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <FaFilePdf className="me-2" />
+                                                    Download PDF
+                                                </>
+                                            )}
+                                        </button>
                                     </div>
                                 </div>
 
-                                <div className="card-footer bg-light">
-                                    <small className="text-muted">
-                                        Certificate ID: {certificate.certificateId}
+                                <div className="card-footer bg-light text-center py-2">
+                                    <small className="text-muted fw-bold">
+                                        ID: {certificate.certificateId}
                                     </small>
                                 </div>
                             </div>

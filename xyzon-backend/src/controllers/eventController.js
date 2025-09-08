@@ -595,7 +595,7 @@ class EventController {
                 limit: parseInt(req.query.limit) || 10,
                 sort: { createdAt: -1 },
                 populate: [
-                    { path: 'event', select: 'title description startDate endDate eventMode eventLink venue status banner' },
+                    { path: 'event', select: 'title description shortDescription startDate endDate eventMode eventLink venue status banner eventType price currency category maxParticipants registrationStartDate registrationEndDate tags bannerUrl' },
                     { path: 'paymentId', select: 'status amount paidAt' }
                 ]
             };

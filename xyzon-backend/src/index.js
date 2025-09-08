@@ -3,9 +3,11 @@ const mailRoutes = require('./routes/mailRoutes');
 const templateRoutes = require('./routes/templateRoutes');
 const authRoutes = require('./routes/authRoutes');
 const eventRoutes = require('./routes/eventRoutes');
+const profileRoutes = require('./routes/profileRoutes');
 const certificateRoutes = require('./routes/certificateRoutes');
 const certificateTemplateRoutes = require('./routes/certificateTemplateRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
+const enquiryRoutes = require('./routes/enquiryRoutes');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
@@ -35,12 +37,14 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/profile', profileRoutes);
 app.use('/api/mail', mailRoutes);
 app.use('/api/templates', templateRoutes);
 app.use('/api/events', eventRoutes);
 app.use('/api/certificates', certificateRoutes);
 app.use('/api/certificate-templates', certificateTemplateRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/enquiries', enquiryRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

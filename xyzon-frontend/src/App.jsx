@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useMenu } from './context/MenuContext';
 import { useAuth } from './auth/AuthContext';
 import { Link } from 'react-router-dom';
+import ContactForm from './components/ContactForm';
 import './App.css';
 
 function useCountUp(target, duration = 1500) {
@@ -658,28 +659,10 @@ export default function App() {
           <p className="text-muted mb-4 fs-5">Ready to transform your career or scale your organization? Let's discuss how we can help you achieve your goals.</p>
         </div>
         <div className="row g-5">
-          <div className="col-lg-6">
-            <form className="card p-4 h-100 d-flex flex-column" onSubmit={(e) => e.preventDefault()}>
-              <div className="mb-3">
-                <label className="form-label">Name</label>
-                <input className="form-control" type="text" required />
-              </div>
-              <div className="mb-3">
-                <label className="form-label">Email</label>
-                <input className="form-control" type="email" required />
-              </div>
-              <div className="mb-3">
-                <label className="form-label">Contact Number</label>
-                <input className="form-control" type="tel" pattern="[0-9+\-() ]{7,}" placeholder="e.g. +91 98765 43210" required />
-              </div>
-              <div className="mb-3 flex-grow-1">
-                <label className="form-label">Message</label>
-                <textarea className="form-control" style={{ minHeight: '120px' }} required />
-              </div>
-              <button className="btn btn-primary mt-auto">Send Message</button>
-            </form>
+          <div className="col-lg-12">
+            <ContactForm />
           </div>
-          <div className="col-lg-6">
+          <div className="col-lg-12">
             <div className="card p-4 h-100">
               <h5 className="mb-4 text-center"><b>Contact Information</b></h5>
               <div className="row">

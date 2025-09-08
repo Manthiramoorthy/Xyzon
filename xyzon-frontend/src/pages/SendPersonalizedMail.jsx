@@ -122,7 +122,7 @@ export default function SendPersonalizedMail() {
                         <div
                             className="justify-content-between d-flex mx-3"
                         >
-                             <button
+                            <button
                                 className="btn btn-outline-secondary shadow me-3"
                                 style={{ minWidth: 150, fontWeight: 600, fontSize: 18 }}
                                 onClick={() => { setTemplate(''); setRecipients([]); setRecipientsRaw(''); setAttachments([]); }}
@@ -137,7 +137,7 @@ export default function SendPersonalizedMail() {
                             >
                                 Send
                             </button>
-                           
+
                         </div>
                         <div className="card-body">
                             <div className="mb-2">
@@ -195,7 +195,7 @@ export default function SendPersonalizedMail() {
             </div>
             {/* Modal for API result */}
             {showModal && result && (
-                <div className="modal fade show" style={{ display: 'block', background: 'rgba(0,0,0,0.4)' }} tabIndex="-1" role="dialog">
+                <div className="modal fade show" style={{ display: 'block', background: 'rgba(0,0,0,0.4)', zIndex: 9999 }} tabIndex="-1" role="dialog">
                     <div className="modal-dialog modal-dialog-centered" role="document">
                         <div className="modal-content">
                             <div className={`modal-header ${result.success ? 'bg-success text-white' : 'bg-danger text-white'}`}>
@@ -227,7 +227,7 @@ export default function SendPersonalizedMail() {
                     </div>
                 </div>
             )}
-        
+
             {/* Excel/CSV Preview Table */}
             {recipients.length > 0 && (
                 <div className="card mt-4 mb-5 shadow-sm">

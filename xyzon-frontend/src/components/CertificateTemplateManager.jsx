@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { useToast } from '../context/ToastContext';
 import * as certificateTemplateApi from '../api/certificateTemplateApi';
 
 const CertificateTemplateManager = () => {
+    const { toast, confirm } = useToast();
+
     const [templates, setTemplates] = useState([]);
     const [loading, setLoading] = useState(false);
     const [showForm, setShowForm] = useState(false);
@@ -37,9 +40,9 @@ const CertificateTemplateManager = () => {
         } catch (error) {
             console.error('Error loading templates:', error);
             if (error.message.includes('401') || error.message.includes('Unauthorized')) {
-                alert('Authentication failed. Please log in again.');
+                toast.error('Authentication failed. Please log in again.');
             } else {
-                alert('Failed to load templates: ' + error.message);
+                toast.error('Failed to load templates: ' + error.message);
             }
             setTemplates([]); // Set empty array on error
         } finally {
@@ -58,7 +61,7 @@ const CertificateTemplateManager = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!formData.name || !formData.htmlContent) {
-            alert('Please fill in all required fields');
+            toast.warning('Please fill in all required fields');
             return;
         }
 
@@ -66,10 +69,10 @@ const CertificateTemplateManager = () => {
             setLoading(true);
             if (editingTemplate) {
                 await certificateTemplateApi.updateTemplate(editingTemplate._id, formData);
-                alert('Template updated successfully!');
+                toast.success('Template updated successfully!');
             } else {
                 await certificateTemplateApi.createTemplate(formData);
-                alert('Template created successfully!');
+                toast.success('Template created successfully!');
             }
 
             setFormData({ name: '', description: '', htmlContent: '' });
@@ -78,7 +81,7 @@ const CertificateTemplateManager = () => {
             await loadTemplates();
         } catch (error) {
             console.error('Error saving template:', error);
-            alert('Failed to save template: ' + error.message);
+            toast.error('Failed to save template: ' + error.message);
         } finally {
             setLoading(false);
         }
@@ -95,18 +98,19 @@ const CertificateTemplateManager = () => {
     };
 
     const handleDelete = async (templateId) => {
-        if (!confirm('Are you sure you want to delete this template?')) {
+        const confirmed = await confirm('Are you sure you want to delete this template?');
+        if (!confirmed) {
             return;
         }
 
         try {
             setLoading(true);
             await certificateTemplateApi.deleteTemplate(templateId);
-            alert('Template deleted successfully!');
+            toast.success('Template deleted successfully!');
             await loadTemplates();
         } catch (error) {
             console.error('Error deleting template:', error);
-            alert('Failed to delete template: ' + error.message);
+            toast.error('Failed to delete template: ' + error.message);
         } finally {
             setLoading(false);
         }
@@ -120,7 +124,7 @@ const CertificateTemplateManager = () => {
             setShowPreview(true);
         } catch (error) {
             console.error('Error previewing template:', error);
-            alert('Failed to preview template: ' + error.message);
+            toast.error('Failed to preview template: ' + error.message);
         } finally {
             setLoading(false);
         }

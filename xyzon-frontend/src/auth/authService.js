@@ -13,15 +13,20 @@ export function setAccessToken(token) {
 export async function register(userData) {
     try {
         const response = await authApiService.register(userData);
+        console.log('Register success response:', response);
         return response.data;
     } catch (error) {
-        throw new Error(error.response?.data?.message || 'Registration failed');
+        console.error('Register error:', error);
+        console.error('Error response:', error.response);
+        const errorMessage = error.response?.data?.error || error.response?.data?.message || 'Registration failed';
+        throw new Error(errorMessage);
     }
 }
 
 export async function login(credentials) {
     try {
         const response = await authApiService.login(credentials);
+        console.log('Login success response:', response);
         const { user, accessToken, refreshToken } = response.data;
 
         // Store tokens
@@ -29,7 +34,10 @@ export async function login(credentials) {
 
         return user;
     } catch (error) {
-        throw new Error(error.response?.data?.message || 'Login failed');
+        console.error('Login error:', error);
+        console.error('Error response:', error.response);
+        const errorMessage = error.response?.data?.error || error.response?.data?.message || 'Login failed';
+        throw new Error(errorMessage);
     }
 }
 

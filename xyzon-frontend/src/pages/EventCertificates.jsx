@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { useToast } from '../context/ToastContext';
 import { eventApi, certificateApi } from '../api/eventApi';
 import * as certificateTemplateApi from '../api/certificateTemplateApi';
 import { generateCertificatePDF, previewCertificate } from '../utils/certificateUtils';
@@ -10,6 +11,8 @@ import {
 
 export default function EventCertificates() {
     const { id } = useParams();
+    const { toast, confirm } = useToast();
+
     const [event, setEvent] = useState(null);
     const [certificates, setCertificates] = useState([]);
     const [registrations, setRegistrations] = useState([]);
@@ -78,7 +81,7 @@ export default function EventCertificates() {
 
     const handleBulkIssue = async () => {
         if (!selectedTemplate) {
-            alert('Please select a certificate template first.');
+            toast.error('Please select a certificate template first.');
             return;
         }
 
@@ -88,11 +91,12 @@ export default function EventCertificates() {
         );
 
         if (eligibleRegistrations.length === 0) {
-            alert('No eligible participants found. All attended participants already have certificates.');
+            toast.error('No eligible participants found. All attended participants already have certificates.');
             return;
         }
 
-        if (window.confirm(`Issue certificates to ${eligibleRegistrations.length} attended participants?`)) {
+        const confirmed = await confirm(`Issue certificates to ${eligibleRegistrations.length} attended participants?`);
+        if (confirmed) {
             setIssuingBulk(true);
             try {
                 const registrationIds = eligibleRegistrations.map(reg => reg._id);
@@ -100,10 +104,10 @@ export default function EventCertificates() {
                     registrationIds: registrationIds,
                     templateId: selectedTemplate
                 });
-                alert('Certificates issued successfully!');
+                toast.success('Certificates issued successfully!');
                 loadData(); // Reload data
             } catch (error) {
-                alert(error.response?.data?.message || 'Failed to issue certificates');
+                toast.error(error.response?.data?.message || 'Failed to issue certificates');
             } finally {
                 setIssuingBulk(false);
             }
@@ -112,7 +116,7 @@ export default function EventCertificates() {
 
     const handleIndividualIssue = async (registrationId) => {
         if (!selectedTemplate) {
-            alert('Please select a certificate template first.');
+            toast.error('Please select a certificate template first.');
             return;
         }
 
@@ -121,10 +125,10 @@ export default function EventCertificates() {
             await certificateApi.issueCertificate(registrationId, {
                 templateId: selectedTemplate
             });
-            alert('Certificate issued successfully!');
+            toast.success('Certificate issued successfully!');
             loadData(); // Reload data
         } catch (error) {
-            alert(error.response?.data?.message || 'Failed to issue certificate');
+            toast.error(error.response?.data?.message || 'Failed to issue certificate');
         } finally {
             setIssuingCertificate(null);
         }
@@ -152,7 +156,7 @@ export default function EventCertificates() {
             setShowPreview(true);
         } catch (error) {
             console.error('Error previewing template:', error);
-            alert('Failed to preview template: ' + error.message);
+            toast.error('Failed to preview template: ' + error.message);
         }
     };
 
@@ -164,11 +168,11 @@ export default function EventCertificates() {
             if (certificate && certificate.generatedHtml) {
                 previewCertificate(certificate.generatedHtml);
             } else {
-                alert('Certificate HTML not available');
+                toast.warning('Certificate HTML not available');
             }
         } catch (error) {
             console.error('Error viewing certificate:', error);
-            alert('Failed to view certificate: ' + (error.response?.data?.message || error.message));
+            toast.error('Failed to view certificate: ' + (error.response?.data?.message || error.message));
         }
     };
 
@@ -196,11 +200,11 @@ export default function EventCertificates() {
                 console.log('PDF generated and downloaded successfully');
 
             } else {
-                alert('Certificate HTML not available for download');
+                toast.warning('Certificate HTML not available for download');
             }
         } catch (error) {
             console.error('Error downloading certificate:', error);
-            alert('Failed to download certificate. Please ensure all images are accessible and try again.\nError: ' + (error.response?.data?.message || error.message));
+            toast.error('Failed to download certificate. Please ensure all images are accessible and try again.\nError: ' + (error.response?.data?.message || error.message));
         } finally {
             // Clear downloading state
             setDownloadingCertificates(prev => {

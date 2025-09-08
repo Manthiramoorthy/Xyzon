@@ -4,7 +4,7 @@ import { useMenu } from '../context/MenuContext';
 import { useAuth } from '../auth/AuthContext';
 import {
     FiFileText, FiMail, FiCalendar, FiPlus,
-    FiUsers, FiBarChart, FiAward, FiUserCheck, FiLogOut
+    FiUsers, FiBarChart, FiAward, FiUserCheck, FiLogOut, FiMessageSquare
 } from 'react-icons/fi';
 
 export default function AdminPanel() {
@@ -21,6 +21,7 @@ export default function AdminPanel() {
             { to: '/admin/certificate', label: 'Certificate Generator', icon: <FiFileText /> },
             { to: '/admin/send-mail', label: 'Send Email', icon: <FiMail /> },
             { to: '/admin/payments', label: 'Payments', icon: <FiBarChart /> },
+            { to: '/admin/enquiries', label: 'Enquiries', icon: <FiMessageSquare /> },
             { action: logout, label: 'Logout', icon: <FiLogOut />, isAction: true },
         ]);
     }, [setItems, logout]);

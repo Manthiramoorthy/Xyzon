@@ -1,0 +1,32 @@
+.toast-demo {
+    min-height: 100vh;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.toast-demo .card {
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    border: none;
+}
+
+.toast-demo .card-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-bottom: none;
+}
+
+.toast-demo .btn {
+    min-width: 120px;
+}
+
+.toast-demo .gap-2 {
+    gap: 0.5rem !important;
+}
+
+.toast-demo ul {
+    list-style-type: none;
+    padding-left: 0;
+}
+
+.toast-demo li {
+    margin-bottom: 0.25rem;
+}

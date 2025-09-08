@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { useToast } from '../context/ToastContext';
 import { eventApi, registrationApi, certificateApi } from '../api/eventApi';
 import {
     FaArrowLeft, FaUsers, FaDownload, FaEnvelope, FaCertificate,
@@ -9,6 +10,8 @@ import {
 
 export default function EventRegistrations() {
     const { id } = useParams();
+    const { toast, confirm } = useToast();
+
     const [event, setEvent] = useState(null);
     const [registrations, setRegistrations] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -108,7 +111,7 @@ export default function EventRegistrations() {
 
             // Fallback: Generate CSV on frontend
             if (dataToExport.length === 0) {
-                alert(`No ${exportType === 'all' ? '' : exportType + ' '}registrations to export`);
+                toast.warning(`No ${exportType === 'all' ? '' : exportType + ' '}registrations to export`);
                 return;
             }
 
@@ -157,23 +160,24 @@ export default function EventRegistrations() {
 
             // Show success message
             const exportTypeText = exportType === 'all' ? 'all' : exportType;
-            alert(`Successfully exported ${dataToExport.length} ${exportTypeText} registrations to CSV`);
+            toast.success(`Successfully exported ${dataToExport.length} ${exportTypeText} registrations to CSV`);
 
         } catch (error) {
             console.error('Export error:', error);
-            alert('Failed to export registrations: ' + (error.message || 'Unknown error'));
+            toast.error('Failed to export registrations: ' + (error.message || 'Unknown error'));
         } finally {
             setExportingCsv(false);
         }
     };
 
     const sendReminderEmails = async () => {
-        if (window.confirm('Send reminder emails to all registered participants?')) {
+        const confirmed = await confirm('Send reminder emails to all registered participants?');
+        if (confirmed) {
             try {
                 await eventApi.sendEventReminders(id);
-                alert('Reminder emails sent successfully!');
+                toast.success('Reminder emails sent successfully!');
             } catch (error) {
-                alert(error.response?.data?.message || 'Failed to send reminder emails');
+                toast.error(error.response?.data?.message || 'Failed to send reminder emails');
             }
         }
     };
@@ -186,9 +190,9 @@ export default function EventRegistrations() {
             });
             // Reload registrations to see updated status
             loadData();
-            alert(`Status updated to ${status}`);
+            toast.success(`Status updated to ${status}`);
         } catch (error) {
-            alert(error.response?.data?.message || 'Failed to update status');
+            toast.error(error.response?.data?.message || 'Failed to update status');
         }
     };
 
@@ -196,10 +200,10 @@ export default function EventRegistrations() {
         setIssuingCertificate(registrationId);
         try {
             await certificateApi.issueCertificate(registrationId);
-            alert('Certificate issued successfully!');
+            toast.success('Certificate issued successfully!');
             loadData(); // Reload data
         } catch (error) {
-            alert(error.response?.data?.message || 'Failed to issue certificate');
+            toast.error(error.response?.data?.message || 'Failed to issue certificate');
         } finally {
             setIssuingCertificate(null);
         }

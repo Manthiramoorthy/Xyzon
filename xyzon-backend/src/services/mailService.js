@@ -267,10 +267,112 @@ const sendCertificateEmail = async (certificate, registration, event) => {
     });
 };
 
+// Send enquiry notification to admin
+const sendEnquiryNotification = async (enquiry) => {
+    const subject = `New Enquiry Received - ${enquiry.subject}`;
+
+    const content = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
+            <h2 style="color: #333; text-align: center; border-bottom: 2px solid #007bff; padding-bottom: 10px;">
+                New Enquiry Received
+            </h2>
+            
+            <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                <h3 style="color: #495057; margin-top: 0;">Customer Information</h3>
+                <p><strong>Name:</strong> ${enquiry.name}</p>
+                <p><strong>Email:</strong> ${enquiry.email}</p>
+                ${enquiry.phone ? `<p><strong>Phone:</strong> ${enquiry.phone}</p>` : ''}
+                <p><strong>Category:</strong> ${enquiry.category}</p>
+                <p><strong>Submitted:</strong> ${new Date(enquiry.createdAt).toLocaleString()}</p>
+            </div>
+            
+            <div style="background-color: #fff3cd; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                <h3 style="color: #856404; margin-top: 0;">Enquiry Details</h3>
+                <p><strong>Subject:</strong> ${enquiry.subject}</p>
+                <div style="background-color: white; padding: 10px; border-left: 4px solid #007bff; margin-top: 10px;">
+                    <strong>Message:</strong><br>
+                    ${enquiry.message.replace(/\n/g, '<br>')}
+                </div>
+            </div>
+            
+            <div style="text-align: center; margin-top: 30px;">
+                <p style="color: #6c757d; font-size: 14px;">
+                    Please log in to the admin panel to respond to this enquiry.
+                </p>
+            </div>
+        </div>
+    `;
+
+    // Send to all admin users
+    const adminEmail = process.env.ADMIN_EMAIL || process.env.MAIL_USER;
+
+    return await sendMailService({
+        to: adminEmail,
+        subject,
+        content
+    });
+};
+
+// Send enquiry response to customer
+const sendEnquiryResponse = async ({ customerEmail, customerName, subject, message, originalEnquiry }) => {
+    const responseSubject = `Re: ${originalEnquiry.subject}`;
+
+    const content = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
+            <h2 style="color: #007bff; text-align: center; border-bottom: 2px solid #007bff; padding-bottom: 10px;">
+                Response to Your Enquiry
+            </h2>
+            
+            <div style="margin: 20px 0;">
+                <p>Dear <strong>${customerName}</strong>,</p>
+                <p>Thank you for contacting us. Here is our response to your enquiry:</p>
+            </div>
+            
+            <div style="background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                <h3 style="color: #495057; margin-top: 0;">${subject}</h3>
+                <div style="line-height: 1.6;">
+                    ${message.replace(/\n/g, '<br>')}
+                </div>
+            </div>
+            
+            <div style="background-color: #e9ecef; padding: 15px; border-radius: 5px; margin: 20px 0;">
+                <h4 style="color: #6c757d; margin-top: 0;">Your Original Enquiry:</h4>
+                <p><strong>Subject:</strong> ${originalEnquiry.subject}</p>
+                <p><strong>Date:</strong> ${new Date(originalEnquiry.createdAt).toLocaleDateString()}</p>
+                <div style="background-color: white; padding: 10px; border-left: 4px solid #6c757d; margin-top: 10px;">
+                    ${originalEnquiry.message.replace(/\n/g, '<br>')}
+                </div>
+            </div>
+            
+            <div style="margin: 30px 0; padding: 15px; background-color: #d1ecf1; border-radius: 5px;">
+                <p style="margin: 0; color: #0c5460;">
+                    <strong>Need further assistance?</strong><br>
+                    Feel free to reply to this email or contact us again through our website.
+                </p>
+            </div>
+            
+            <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #dee2e6;">
+                <p style="color: #6c757d; font-size: 14px; margin: 0;">
+                    Best regards,<br>
+                    <strong>Xyzon Team</strong>
+                </p>
+            </div>
+        </div>
+    `;
+
+    return await sendMailService({
+        to: customerEmail,
+        subject: responseSubject,
+        content
+    });
+};
+
 module.exports = {
     sendMailService,
     sendPersonalizedBulkService,
     sendEventRegistrationConfirmation,
     sendEventReminder,
-    sendCertificateEmail
+    sendCertificateEmail,
+    sendEnquiryNotification,
+    sendEnquiryResponse
 };

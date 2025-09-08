@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { authApiService } from '../api/authApi';
+import { useToast } from '../context/ToastContext';
 import {
     FaUsers, FaSearch, FaFilter, FaUserShield, FaUserSlash,
     FaTrash, FaEdit, FaEye, FaBan, FaCheck
@@ -82,6 +83,8 @@ const UserCard = ({ user, onUpdateRole, onSuspend, onDelete }) => {
 };
 
 export default function UserManagement() {
+    const { toast, confirm } = useToast();
+
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -111,9 +114,11 @@ export default function UserManagement() {
             };
 
             const response = await authApiService.admin.getAllUsers(params);
-            setUsers(response.data.data.docs || response.data.data);
+            console.log('API Response:', response);
+            setUsers(response.data.data.docs || response.data.data || response.data || []);
         } catch (error) {
-            setError(error.response?.data?.message || 'Failed to load users');
+            console.error('Load Users Error:', error);
+            setError(error.response?.data?.message || error.response?.data?.error || error.message || 'Failed to load users');
         } finally {
             setLoading(false);
         }
@@ -138,9 +143,9 @@ export default function UserManagement() {
                 u._id === selectedUser._id ? { ...u, role: newRole } : u
             ));
             setShowRoleModal(false);
-            alert('User role updated successfully');
+            toast.success('User role updated successfully');
         } catch (error) {
-            alert(error.response?.data?.message || 'Failed to update user role');
+            toast.error(error.response?.data?.message || 'Failed to update user role');
         }
     };
 
@@ -150,7 +155,8 @@ export default function UserManagement() {
             `Are you sure you want to suspend ${user.name}?` :
             `Are you sure you want to unsuspend ${user.name}?`;
 
-        if (window.confirm(confirmText)) {
+        const confirmed = await confirm(confirmText);
+        if (confirmed) {
             try {
                 if (user.isActive) {
                     await authApiService.admin.suspendUser(user._id);
@@ -161,21 +167,22 @@ export default function UserManagement() {
                 setUsers(prev => prev.map(u =>
                     u._id === user._id ? { ...u, isActive: !user.isActive } : u
                 ));
-                alert(`User ${action}ed successfully`);
+                toast.success(`User ${action}ed successfully`);
             } catch (error) {
-                alert(error.response?.data?.message || `Failed to ${action} user`);
+                toast.error(error.response?.data?.message || `Failed to ${action} user`);
             }
         }
     };
 
     const handleDelete = async (user) => {
-        if (window.confirm(`Are you sure you want to permanently delete ${user.name}? This action cannot be undone.`)) {
+        const confirmed = await confirm(`Are you sure you want to permanently delete ${user.name}? This action cannot be undone.`);
+        if (confirmed) {
             try {
                 await authApiService.admin.deleteUser(user._id);
                 setUsers(prev => prev.filter(u => u._id !== user._id));
-                alert('User deleted successfully');
+                toast.success('User deleted successfully');
             } catch (error) {
-                alert(error.response?.data?.message || 'Failed to delete user');
+                toast.error(error.response?.data?.message || 'Failed to delete user');
             }
         }
     };
@@ -331,7 +338,7 @@ export default function UserManagement() {
 
             {/* Role Update Modal */}
             {showRoleModal && (
-                <div className="modal z-3000 d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+                <div className="modal d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 9999 }}>
                     <div className="modal-dialog">
                         <div className="modal-content">
                             <div className="modal-header">

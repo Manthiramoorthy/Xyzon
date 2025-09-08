@@ -192,3 +192,19 @@ body:not(.auth-page) {
 
 @media (max-width:768px){ .hero-content h1{font-size:2.5rem;} .card{padding:1.5rem;} .hero-section{padding:4rem 0;} }
 
+/* Z-Index Management */
+/* Ensure all modal overlays appear above Bootstrap components and headers */
+.modal-overlay-high-z {
+    z-index: 9999 !important;
+}
+
+/* Override Bootstrap modal z-index if needed */
+.modal.show {
+    z-index: 9999 !important;
+}
+
+/* Ensure dropdowns don't interfere with modals */
+.dropdown-menu {
+    z-index: 1050;
+}
+
