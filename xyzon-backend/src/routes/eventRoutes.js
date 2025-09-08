@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const EventController = require('../controllers/eventController');
+const PaymentController = require('../controllers/paymentController');
 const { auth } = require('../middleware/auth');
 
 // Public routes
@@ -10,6 +11,8 @@ router.get('/:id', EventController.getEvent);
 // User routes (require authentication)
 router.post('/:id/register', auth(), EventController.registerForEvent);
 router.post('/payment/verify', auth(), EventController.verifyPayment);
+router.post('/register-after-payment', auth(), EventController.createRegistrationAfterPayment);
+router.post('/payments/create-order', auth(), PaymentController.createOrder);
 router.get('/user/registrations', auth(), EventController.getMyRegistrations);
 
 // User certificate routes

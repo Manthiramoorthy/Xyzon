@@ -237,6 +237,14 @@ class EventService {
             .update(`${razorpay_order_id}|${razorpay_payment_id}`)
             .digest('hex');
 
+        // Debug logging for signature verification
+        console.log('[Razorpay Signature Debug]');
+        console.log('razorpay_order_id:', razorpay_order_id);
+        console.log('razorpay_payment_id:', razorpay_payment_id);
+        console.log('razorpay_signature (from client):', razorpay_signature);
+        console.log('expectedSignature (server):', expectedSignature);
+        console.log('RAZORPAY_KEY_SECRET:', process.env.RAZORPAY_KEY_SECRET ? '***' : undefined);
+
         if (expectedSignature !== razorpay_signature) {
             throw new Error('Invalid payment signature');
         }
@@ -253,12 +261,91 @@ class EventService {
         payment.paidAt = new Date();
         await payment.save();
 
-        // Update registration status
-        await EventRegistration.findByIdAndUpdate(payment.registration, {
-            paymentStatus: 'completed'
-        });
+
+        // Update registration status if registration exists (legacy flow)
+        if (payment.registration) {
+            await EventRegistration.findByIdAndUpdate(payment.registration, {
+                paymentStatus: 'completed'
+            });
+        }
 
         return payment;
+    }
+
+    // Create Registration with existing Payment
+    async createRegistrationWithPayment(eventId, userId, userData, answers = [], paymentId) {
+        const event = await Event.findById(eventId);
+        if (!event) {
+            throw new Error('Event not found');
+        }
+
+        // Check registration status
+        const now = new Date();
+        if (now < event.registrationStartDate) {
+            throw new Error('Registration has not started yet');
+        }
+        if (now > event.registrationEndDate) {
+            throw new Error('Registration has ended');
+        }
+        if (event.maxParticipants && event.currentParticipants >= event.maxParticipants) {
+            throw new Error('Event is full');
+        }
+
+        // Check if already registered
+        const existingRegistration = await EventRegistration.findOne({
+            event: eventId,
+            user: userId
+        });
+        if (existingRegistration) {
+            throw new Error('Already registered for this event');
+        }
+
+        // Process registration answers
+        const processedAnswers = answers.map(answer => ({
+            questionId: answer.questionId,
+            question: answer.question,
+            answer: answer.answer
+        }));
+
+        // Generate QR code
+        const qrData = `${process.env.FRONTEND_URL}/events/${eventId}/registration/${userId}`;
+        const qrCode = await QRCode.toDataURL(qrData);
+
+        // Generate unique registration ID
+        const registrationId = `REG${Date.now()}${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
+
+        // Create registration with payment already completed
+        const registration = new EventRegistration({
+            event: eventId,
+            user: userId,
+            registrationId: registrationId,
+            name: userData.name,
+            email: userData.email,
+            phone: userData.phone,
+            answers: processedAnswers,
+            paymentRequired: true,
+            amount: event.price,
+            paymentStatus: 'completed',
+            paymentId: paymentId,
+            qrCode
+        });
+
+        await registration.save();
+
+        // Update event participant count
+        await Event.findByIdAndUpdate(eventId, {
+            $inc: { currentParticipants: 1 }
+        });
+
+        // Update payment with registration reference
+        await Payment.findByIdAndUpdate(paymentId, {
+            registration: registration._id
+        });
+
+        return {
+            registration,
+            event
+        };
     }
 
     // Get Event Registrations

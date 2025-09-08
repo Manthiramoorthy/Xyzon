@@ -20,6 +20,7 @@ export default function AdminPanel() {
             { to: '/admin/certificate-templates', label: 'Certificate Templates', icon: <FiAward /> },
             { to: '/admin/certificate', label: 'Certificate Generator', icon: <FiFileText /> },
             { to: '/admin/send-mail', label: 'Send Email', icon: <FiMail /> },
+            { to: '/admin/payments', label: 'Payments', icon: <FiBarChart /> },
             { action: logout, label: 'Logout', icon: <FiLogOut />, isAction: true },
         ]);
     }, [setItems, logout]);

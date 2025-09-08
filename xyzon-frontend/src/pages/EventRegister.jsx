@@ -100,33 +100,64 @@ export default function EventRegister() {
         setRegistering(true);
         try {
             if (event.eventType === 'paid') {
-                // For paid events, create Razorpay order
+                // 1. Create Razorpay order (no registration yet)
                 const orderResponse = await registrationApi.createRazorpayOrder({
-                    eventId: event._id,
-                    amount: event.price
+                    eventId: event._id
                 });
+
+                console.log('Order Response:', orderResponse);
+                console.log('Order Response Data:', orderResponse.data);
+
+                // Extract orderId from the nested data structure
+                const orderId = orderResponse.data?.data?.orderId || orderResponse.data?.orderId || orderResponse.data?.id;
+                console.log('Extracted Order ID:', orderId);
+
+                if (!orderId) {
+                    console.error('No order ID found in response:', orderResponse);
+                    window.toast && window.toast.error ? window.toast.error('Failed to create payment order. Please try again.') : alert('Failed to create payment order. Please try again.');
+                    return;
+                }
 
                 const options = {
                     key: import.meta.env.VITE_RAZORPAY_KEY_ID,
-                    amount: orderResponse.data.amount,
+                    amount: event.price * 100, // Always use event.price * 100 for display
                     currency: orderResponse.data.currency,
                     name: 'Xyzon Events',
                     description: event.title,
-                    order_id: orderResponse.data.id,
+                    order_id: orderId,
                     handler: async (response) => {
                         try {
-                            // Verify payment and complete registration
+                            console.log('Razorpay Response:', response);
+
+                            // Check if all required fields are present
+                            if (!response.razorpay_order_id || !response.razorpay_payment_id || !response.razorpay_signature) {
+                                console.error('Missing required fields in Razorpay response:', {
+                                    order_id: response.razorpay_order_id,
+                                    payment_id: response.razorpay_payment_id,
+                                    signature: response.razorpay_signature
+                                });
+                                window.toast && window.toast.error ? window.toast.error('Payment incomplete. Missing verification data.') : alert('Payment incomplete. Missing verification data.');
+                                return;
+                            }
+
+                            // 2. Verify payment
                             await registrationApi.verifyPayment({
                                 razorpay_order_id: response.razorpay_order_id,
                                 razorpay_payment_id: response.razorpay_payment_id,
-                                razorpay_signature: response.razorpay_signature,
-                                registrationData
+                                razorpay_signature: response.razorpay_signature
                             });
 
-                            alert('Registration successful! You will receive a confirmation email shortly.');
+                            // 3. Create registration with the paid order
+                            await registrationApi.registerAfterPayment({
+                                ...registrationData,
+                                razorpay_order_id: response.razorpay_order_id
+                            });
+
+                            window.toast && window.toast.success ? window.toast.success('Registration successful! You will receive a confirmation email shortly.') : alert('Registration successful! You will receive a confirmation email shortly.');
                             navigate('/user/registrations');
                         } catch (error) {
-                            alert('Payment verification failed. Please try again.');
+                            console.log(error)
+                            window.toast && window.toast.error ? window.toast.error('Payment verification or registration failed. Please try again.') : alert('Payment verification or registration failed. Please try again.');
                         }
                     },
                     prefill: {
@@ -136,19 +167,24 @@ export default function EventRegister() {
                     },
                     theme: {
                         color: '#000066'
+                    },
+                    modal: {
+                        ondismiss: () => {
+                            window.toast && window.toast.info ? window.toast.info('Payment cancelled.') : alert('Payment cancelled.');
+                        }
                     }
                 };
-
                 const razorpay = new window.Razorpay(options);
                 razorpay.open();
             } else {
                 // Free event registration
                 await registrationApi.registerForEvent(event._id, registrationData);
-                alert('Registration successful! You will receive a confirmation email shortly.');
+                window.toast && window.toast.success ? window.toast.success('Registration successful! You will receive a confirmation email shortly.') : alert('Registration successful! You will receive a confirmation email shortly.');
                 navigate('/user/registrations');
             }
         } catch (error) {
-            alert(error.response?.data?.message || 'Registration failed. Please try again.');
+            console.log(error);
+            window.toast && window.toast.error ? window.toast.error(error.response?.data?.message || 'Registration failed. Please try again.') : alert(error.response?.data?.message || 'Registration failed. Please try again.');
         } finally {
             setRegistering(false);
         }

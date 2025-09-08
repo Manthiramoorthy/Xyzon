@@ -2,6 +2,7 @@ const Payment = require('../models/Payment');
 const EventRegistration = require('../models/EventRegistration');
 const Event = require('../models/Event');
 const mongoose = require('mongoose');
+require('dotenv').config();
 
 // Initialize Razorpay only if credentials are available
 let razorpay = null;
@@ -11,6 +12,9 @@ if (process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET) {
         key_id: process.env.RAZORPAY_KEY_ID,
         key_secret: process.env.RAZORPAY_KEY_SECRET,
     });
+    console.log('Razorpay initialized successfully');
+} else {
+    console.warn('Razorpay credentials are not set. Payment functionalities will be disabled.');
 }
 
 class PaymentController {
@@ -18,49 +22,94 @@ class PaymentController {
     static async createOrder(req, res) {
         try {
             if (!razorpay) {
+                console.error('Razorpay not initialized. ENV:', {
+                    RAZORPAY_KEY_ID: process.env.RAZORPAY_KEY_ID,
+                    RAZORPAY_KEY_SECRET: process.env.RAZORPAY_KEY_SECRET ? '***' : undefined
+                });
                 return res.status(500).json({
                     success: false,
-                    message: 'Payment service not configured'
+                    message: 'Payment service not configured',
+                    env: {
+                        RAZORPAY_KEY_ID: process.env.RAZORPAY_KEY_ID,
+                        RAZORPAY_KEY_SECRET: process.env.RAZORPAY_KEY_SECRET ? '***' : undefined
+                    }
                 });
             }
 
-            const { eventId, registrationId } = req.body;
+            const { eventId } = req.body;
+            if (!eventId) {
+                console.error('Missing eventId in request body:', req.body);
+                return res.status(400).json({
+                    success: false,
+                    message: 'Missing eventId in request body',
+                    body: req.body
+                });
+            }
 
             const event = await Event.findById(eventId);
             if (!event) {
+                console.error('Event not found for eventId:', eventId);
                 return res.status(404).json({
                     success: false,
-                    message: 'Event not found'
-                });
-            }
-
-            const registration = await EventRegistration.findById(registrationId);
-            if (!registration) {
-                return res.status(404).json({
-                    success: false,
-                    message: 'Registration not found'
+                    message: 'Event not found',
+                    eventId
                 });
             }
 
             // Create Razorpay order
+            // Razorpay requires receipt to be <= 40 chars
+            let baseReceipt = `receipt_${event._id}`;
+            if (baseReceipt.length > 32) baseReceipt = baseReceipt.slice(0, 32);
+            const receipt = `${baseReceipt}_${Date.now()}`.slice(0, 40);
+            // Validate minimum price for Razorpay (must be at least 1)
+            if (!event.price || event.price < 1) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Event price must be at least 1 rupee for paid events.'
+                });
+            }
             const options = {
-                amount: event.price * 100, // Amount in paise
+                amount: event.price * 100,
                 currency: event.currency || 'INR',
-                receipt: `receipt_${registration.registrationId}`,
+                receipt,
                 notes: {
                     eventId: event._id.toString(),
-                    userId: req.user.id,
-                    registrationId: registration.registrationId
+                    userId: req.user.id
                 }
             };
 
-            const razorpayOrder = await razorpay.orders.create(options);
+            console.log('Creating Razorpay order with options:', options);
 
-            // Save payment record
+            let razorpayOrder;
+            try {
+                razorpayOrder = await razorpay.orders.create(options);
+            } catch (err) {
+                console.error('Error creating Razorpay order:', err, options);
+                return res.status(500).json({
+                    success: false,
+                    message: 'Failed to create Razorpay order',
+                    error: err.message,
+                    options
+                });
+            }
+
+
+            // Prevent duplicate payment records for the same user/event if one is already pending/created
+            const existingPayment = await Payment.findOne({
+                user: req.user.id,
+                event: eventId,
+                status: { $in: ['created', 'attempted'] }
+            });
+            if (existingPayment) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'A payment is already in progress for this event. Please complete or cancel the previous payment before trying again.'
+                });
+            }
+
             const payment = new Payment({
                 user: req.user.id,
                 event: eventId,
-                registration: registrationId,
                 amount: event.price,
                 currency: event.currency || 'INR',
                 razorpayOrderId: razorpayOrder.id,
@@ -68,7 +117,16 @@ class PaymentController {
                 notes: options.notes
             });
 
-            await payment.save();
+            try {
+                await payment.save();
+            } catch (err) {
+                console.error('Error saving payment record:', err, payment);
+                return res.status(500).json({
+                    success: false,
+                    message: 'Failed to save payment record',
+                    error: err.message
+                });
+            }
 
             res.json({
                 success: true,
@@ -80,9 +138,12 @@ class PaymentController {
                 }
             });
         } catch (error) {
+            console.error('Unhandled error in createOrder:', error, req.body);
             res.status(500).json({
                 success: false,
-                message: error.message
+                message: error.message,
+                stack: error.stack,
+                body: req.body
             });
         }
     }
@@ -182,6 +243,55 @@ class PaymentController {
                 { user: req.user.id },
                 options
             );
+
+            res.json({
+                success: true,
+                data: payments
+            });
+        } catch (error) {
+            res.status(500).json({
+                success: false,
+                message: error.message
+            });
+        }
+    }
+
+    // Admin: Get All Payments
+    static async getAllPayments(req, res) {
+        try {
+            const options = {
+                page: parseInt(req.query.page) || 1,
+                limit: parseInt(req.query.limit) || 10,
+                sort: { createdAt: -1 },
+                populate: [
+                    { path: 'user', select: 'name email' },
+                    { path: 'event', select: 'title eventType price' },
+                    { path: 'registration', select: 'registrationId name' }
+                ]
+            };
+
+            // Add filters if provided
+            const filters = {};
+            if (req.query.status) {
+                filters.status = req.query.status;
+            }
+            if (req.query.eventId) {
+                filters.event = req.query.eventId;
+            }
+            if (req.query.userId) {
+                filters.user = req.query.userId;
+            }
+            if (req.query.startDate || req.query.endDate) {
+                filters.createdAt = {};
+                if (req.query.startDate) {
+                    filters.createdAt.$gte = new Date(req.query.startDate);
+                }
+                if (req.query.endDate) {
+                    filters.createdAt.$lte = new Date(req.query.endDate);
+                }
+            }
+
+            const payments = await Payment.paginate(filters, options);
 
             res.json({
                 success: true,

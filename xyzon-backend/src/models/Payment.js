@@ -5,7 +5,7 @@ const paymentSchema = new mongoose.Schema({
     // Reference
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     event: { type: mongoose.Schema.Types.ObjectId, ref: 'Event', required: true },
-    registration: { type: mongoose.Schema.Types.ObjectId, ref: 'EventRegistration', required: true },
+    registration: { type: mongoose.Schema.Types.ObjectId, ref: 'EventRegistration', required: false },
 
     // Payment Details
     amount: { type: Number, required: true, min: 0 },

@@ -1,4 +1,5 @@
-import React from "react";
+import React, { Suspense } from "react";
+const AdminPayments = React.lazy(() => import('./pages/AdminPayments'));
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { CertificateGenerator, SendPersonalizedMail } from "./pages";
 import { Header } from "./components/Header";
@@ -21,6 +22,7 @@ import EventForm from './pages/EventForm';
 import AdminEventList from './pages/AdminEventList';
 import UserRegistrations from './pages/UserRegistrations';
 import UserCertificates from './pages/UserCertificates';
+import UserPayments from './pages/UserPayments';
 import UserManagement from './pages/UserManagement';
 import EventStats from './pages/EventStats';
 import EventRegistrations from './pages/EventRegistrations';
@@ -69,10 +71,16 @@ export default function AppRouter() {
                                 <Route path="events/:id/certificates" element={<EventCertificates />} />
                                 <Route path="certificate-templates" element={<CertificateTemplateManager />} />
                                 <Route path="users" element={<UserManagement />} />
+                                <Route path="payments" element={
+                                    <Suspense fallback={<div>Loading...</div>}>
+                                        <AdminPayments />
+                                    </Suspense>
+                                } />
                             </Route>                            {/* User panel */}
                             <Route path="/user" element={<ProtectedRoute><UserPanel /></ProtectedRoute>}>
                                 <Route path="certificate" element={<CertificateGenerator />} />
                                 <Route path="registrations" element={<UserRegistrations />} />
+                                <Route path="payments" element={<UserPayments />} />
                                 <Route path="certificates" element={<UserCertificates />} />
                             </Route>
                         </Routes>

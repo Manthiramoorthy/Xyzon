@@ -93,11 +93,14 @@ export const eventApi = {
 // Registration APIs
 export const registrationApi = {
     registerForEvent: (eventId, data) => api.post(`/events/${eventId}/register`, data),
+    registerAfterPayment: (data) => api.post('/events/register-after-payment', data),
     getUserRegistrations: (params = {}) => api.get('/events/user/registrations', { params }),
     getEventRegistrations: (eventId, params = {}) => api.get(`/events/${eventId}/registrations`, { params }),
     markAttendance: (registrationId, data) => api.put(`/events/registrations/${registrationId}/attendance`, data),
     updateRegistrationStatus: (registrationId, data) => api.put(`/events/registrations/${registrationId}/status`, data),
     cancelRegistration: (registrationId) => api.delete(`/events/registrations/${registrationId}`),
+    createRazorpayOrder: (data) => api.post('/payments/create-order', data),
+    verifyPayment: (data) => api.post('/events/payment/verify', data),
 };
 
 // Payment APIs
@@ -105,9 +108,11 @@ export const paymentApi = {
     verifyPayment: (data) => api.post('/events/payment/verify', data),
     getPayment: (id) => api.get(`/payments/${id}`),
     getUserPayments: (params = {}) => api.get('/payments/user/my-payments', { params }),
+    getAllPayments: (params = {}) => api.get('/payments/admin/all-payments', { params }),
     getEventPayments: (eventId, params = {}) => api.get(`/payments/event/${eventId}/payments`, { params }),
     refundPayment: (id, data) => api.post(`/payments/${id}/refund`, data),
     createRazorpayOrder: (data) => api.post('/payments/create-order', data),
+    getPaymentStatistics: (params = {}) => api.get('/payments/admin/statistics', { params }),
 };
 
 // Certificate APIs

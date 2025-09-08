@@ -3,6 +3,7 @@ const { sendEventRegistrationConfirmation, sendEventReminder, sendCertificateEma
 const Event = require('../models/Event');
 const EventRegistration = require('../models/EventRegistration');
 const Certificate = require('../models/Certificate');
+const Payment = require('../models/Payment');
 const multer = require('multer');
 const path = require('path');
 const sharp = require('sharp');
@@ -316,12 +317,30 @@ class EventController {
 
     // Verify Payment
     static async verifyPayment(req, res) {
+        console.log('Verifying payment with data:', req.body);
         try {
+
             const payment = await eventService.verifyPayment(req.body);
 
-            // Send confirmation email after successful payment
-            const registration = await EventRegistration.findById(payment.registration).populate('event');
-            await sendEventRegistrationConfirmation(registration, registration.event, payment);
+            // Only send confirmation email if registration exists (legacy flow)
+            if (payment.registration) {
+                const registration = await EventRegistration.findById(payment.registration).populate('event');
+                if (registration) {
+                    await sendEventRegistrationConfirmation(registration, registration.event, payment);
+                }
+            } else if (payment.event && payment.user) {
+                // New flow: fetch registration by user and event
+                const registration = await EventRegistration.findOne({
+                    event: payment.event,
+                    user: payment.user
+                }).populate('event');
+                if (registration) {
+                    await sendEventRegistrationConfirmation(registration, registration.event, payment);
+                }
+            } else {
+                console.log('No registration found for payment:', payment._id);
+            }
+
 
             res.json({
                 success: true,
@@ -329,6 +348,71 @@ class EventController {
                 data: payment
             });
         } catch (error) {
+            console.error('Payment verification failed:', error);
+            res.status(400).json({
+                success: false,
+                message: error.message
+            });
+        }
+    }
+
+    // Create Registration after Payment
+    static async createRegistrationAfterPayment(req, res) {
+        try {
+            const { razorpay_order_id } = req.body;
+            const { answers } = req.body;
+            const userData = {
+                name: req.body.name || req.user.name,
+                email: req.body.email || req.user.email,
+                phone: req.body.phone
+            };
+
+            // Find the paid payment record
+            const payment = await Payment.findOne({
+                razorpayOrderId: razorpay_order_id,
+                status: 'paid',
+                user: req.user.id
+            }).populate('event');
+
+            if (!payment) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'No verified payment found for this order'
+                });
+            }
+
+            // Check if registration already exists
+            const existingRegistration = await EventRegistration.findOne({
+                event: payment.event._id,
+                user: req.user.id
+            });
+
+            if (existingRegistration) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Registration already exists for this event'
+                });
+            }
+
+            // Create registration with payment information
+            const result = await eventService.createRegistrationWithPayment(
+                payment.event._id,
+                req.user.id,
+                userData,
+                answers,
+                payment._id
+            );
+
+            // Send confirmation email
+            await sendEventRegistrationConfirmation(result.registration, payment.event, payment);
+
+            res.status(201).json({
+                success: true,
+                message: 'Registration successful',
+                data: result
+            });
+        } catch (error) {
+            console.error('Registration after payment failed:', error);
             res.status(400).json({
                 success: false,
                 message: error.message
