@@ -27,43 +27,69 @@ export default function RegisterPage() {
         return score;
     }, [form.password]);
     return (
-        <div className="auth-page-root fade-in">
+        <div className="auth-page-root">
             <div className="auth-shell">
-                <div className="auth-panel-brand blue">
+                <div className="auth-panel-brand orange">
                     <div className="brand-inner">
-                        <img src="/assets/images/default-logo.jpeg" alt="Xyzon" className="auth-logo" />
-                        <h1>Join Xyzon</h1>
-                        <p>Start your journey in innovation & entrepreneurship.</p>
-                        <ul>
-                            <li>Community Mentorship</li>
-                            <li>Hackathons & Challenges</li>
-                            <li>Industry-grade Projects</li>
-                        </ul>
+                        <img src="/assets/images/xyzon.png" alt="Xyzon" className="auth-logo" />
+                        <div className="brand-badge">
+                            <span className="badge-text">Join 500+ Students</span>
+                            <div className="badge-icon">🎯</div>
+                        </div>
+                        <h1>Start Your Innovation Journey</h1>
+                        <p className="brand-subtitle">Join Xyzon's community of innovators, entrepreneurs, and change-makers. Build the future with hands-on experience and industry mentorship.</p>
+                        <div className="feature-list">
+                            <div className="feature-item">
+                                <div className="feature-icon">💡</div>
+                                <div className="feature-content">
+                                    <h3>Learn by Doing</h3>
+                                    <p>Real-world projects with industry-grade tools and technologies</p>
+                                </div>
+                            </div>
+                            <div className="feature-item">
+                                <div className="feature-icon">🤝</div>
+                                <div className="feature-content">
+                                    <h3>Expert Mentorship</h3>
+                                    <p>Get guidance from industry veterans and successful entrepreneurs</p>
+                                </div>
+                            </div>
+                            <div className="feature-item">
+                                <div className="feature-icon">🚀</div>
+                                <div className="feature-content">
+                                    <h3>Launch Your Startup</h3>
+                                    <p>From idea validation to product launch - we support your journey</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="testimonial">
+                            <div className="testimonial-text">"Xyzon transformed my idea into a successful startup. The community and mentorship are unmatched!"</div>
+                            <div className="testimonial-author">- Sarah K., Alumni</div>
+                        </div>
                     </div>
                 </div>
                 <form onSubmit={submit} className="auth-form-panel" aria-describedby={error ? 'reg-error' : undefined}>
-                    <h2>Create Account</h2>
+                    <h2>Create Your Account</h2>
                     {error && <div id="reg-error" className="auth-error" role="alert"><FiAlertCircle style={{ marginTop: 2 }} /> {error}</div>}
                     <div className="auth-field">
-                        <label className="auth-label" htmlFor="reg-name">Name</label>
+                        <label className="auth-label" htmlFor="reg-name">Full Name</label>
                         <div className="auth-input-wrap">
                             <FiUser className="auth-icon" />
-                            <input id="reg-name" className="auth-input" name="name" value={form.name} onChange={onChange} required placeholder="Your full name" autoComplete="name" />
+                            <input id="reg-name" className="auth-input" name="name" value={form.name} onChange={onChange} required placeholder="Enter your full name" autoComplete="name" />
                         </div>
                     </div>
                     <div className="auth-field">
-                        <label className="auth-label" htmlFor="reg-email">Email</label>
+                        <label className="auth-label" htmlFor="reg-email">Email Address</label>
                         <div className="auth-input-wrap">
                             <FiMail className="auth-icon" />
-                            <input id="reg-email" className="auth-input" name="email" type="email" value={form.email} onChange={onChange} required placeholder="you@domain.com" autoComplete="email" />
+                            <input id="reg-email" className="auth-input" name="email" type="email" value={form.email} onChange={onChange} required placeholder="Enter your email" autoComplete="email" />
                         </div>
                     </div>
                     <div className="auth-field">
-                        <label className="auth-label" htmlFor="reg-password">Password</label>
+                        <label className="auth-label" htmlFor="reg-password">Create Password</label>
                         <div className="auth-input-wrap">
                             <FiLock className="auth-icon" />
-                            <input id="reg-password" className="auth-input" name="password" type={showPwd ? 'text' : 'password'} value={form.password} onChange={onChange} required minLength={8} placeholder="Min 8 characters" autoComplete="new-password" />
-                            <button type="button" onClick={() => setShowPwd(s => !s)} className="auth-eye-btn">{showPwd ? <FiEyeOff /> : <FiEye />}</button>
+                            <input id="reg-password" className="auth-input" name="password" type={showPwd ? 'text' : 'password'} value={form.password} onChange={onChange} required minLength={8} placeholder="Create a strong password" autoComplete="new-password" />
+                            <button type="button" onClick={() => setShowPwd(s => !s)} className="auth-eye-btn" aria-label={showPwd ? 'Hide password' : 'Show password'}>{showPwd ? <FiEyeOff /> : <FiEye />}</button>
                         </div>
                         <PasswordHints pwd={form.password} />
                         <div className="strength-track" aria-hidden="true">
@@ -71,8 +97,8 @@ export default function RegisterPage() {
                         </div>
                         <div className="strength-label">Password strength: {['Weak', 'Fair', 'Good', 'Strong'][strength]}</div>
                     </div>
-                    <button className="auth-btn" disabled={loading}>{loading ? 'Creating...' : 'Register'}</button>
-                    <div className="auth-links">Have an account? <Link to="/login">Login</Link></div>
+                    <button className="auth-btn" disabled={loading}>{loading ? 'Creating Account...' : 'Create Account'}</button>
+                    <div className="auth-links">Already have an account? <Link to="/login">Sign in here</Link></div>
                 </form>
             </div>
         </div>
