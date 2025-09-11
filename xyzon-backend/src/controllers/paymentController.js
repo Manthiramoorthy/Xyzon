@@ -94,17 +94,52 @@ class PaymentController {
             }
 
 
-            // Prevent duplicate payment records for the same user/event if one is already pending/created
+            // Detect existing pending payment and optionally reuse or cancel
             const existingPayment = await Payment.findOne({
                 user: req.user.id,
                 event: eventId,
                 status: { $in: ['created', 'attempted'] }
             });
             if (existingPayment) {
-                return res.status(400).json({
-                    success: false,
-                    message: 'A payment is already in progress for this event. Please complete or cancel the previous payment before trying again.'
-                });
+                // Auto-expire if older than 10 minutes
+                const thirtyMins = 10 * 60 * 1000;
+                const age = Date.now() - new Date(existingPayment.createdAt).getTime();
+                if (age > thirtyMins) {
+                    existingPayment.status = 'cancelled';
+                    existingPayment.canceledAt = new Date();
+                    await existingPayment.save();
+                } else {
+                    // Allow client to request reuse instead of creating order again
+                    if (req.body?.reuseExisting) {
+                        return res.json({
+                            success: true,
+                            reused: true,
+                            data: {
+                                orderId: existingPayment.razorpayOrderId,
+                                amount: existingPayment.amount * 100,
+                                currency: existingPayment.currency,
+                                paymentId: existingPayment._id
+                            }
+                        });
+                    }
+                    // Allow forced cancel via flag
+                    if (req.body?.forceCancelExisting) {
+                        existingPayment.status = 'cancelled';
+                        existingPayment.canceledAt = new Date();
+                        await existingPayment.save();
+                    } else {
+                        return res.status(400).json({
+                            success: false,
+                            code: 'PAYMENT_IN_PROGRESS',
+                            message: 'A payment is already in progress for this event.',
+                            action: 'reuse or cancel',
+                            paymentId: existingPayment._id,
+                            createdAt: existingPayment.createdAt,
+                            canReuse: true,
+                            canForceCancel: true
+                        });
+                    }
+                }
             }
 
             const payment = new Payment({
@@ -145,6 +180,30 @@ class PaymentController {
                 stack: error.stack,
                 body: req.body
             });
+        }
+    }
+
+    // Cancel a pending payment (user initiated)
+    static async cancelPending(req, res) {
+        try {
+            const payment = await Payment.findOne({
+                _id: req.params.id,
+                user: req.user.id,
+                status: { $in: ['created', 'attempted'] }
+            });
+            if (!payment) {
+                return res.status(404).json({ success: false, message: 'Pending payment not found' });
+            }
+            payment.status = 'cancelled';
+            payment.canceledAt = new Date();
+            await payment.save();
+            // Also mark linked registration (if any) back to pending or remove association
+            if (payment.registration) {
+                await EventRegistration.findByIdAndUpdate(payment.registration, { paymentStatus: 'pending', paymentId: null });
+            }
+            res.json({ success: true, message: 'Payment cancelled', data: { paymentId: payment._id } });
+        } catch (error) {
+            res.status(500).json({ success: false, message: error.message });
         }
     }
 
@@ -204,8 +263,10 @@ class PaymentController {
     static async getPaymentStatus(req, res) {
         try {
             const payment = await Payment.findById(req.params.id)
-                .populate('event', 'title price')
-                .populate('registration', 'registrationId name');
+                .populate('event', 'title price startDate banner')
+                .populate('registration', 'registrationId name')
+                // Include limited user fields for invoice generation on frontend
+                .populate('user', 'name email phone');
 
             if (!payment) {
                 return res.status(404).json({
@@ -235,7 +296,9 @@ class PaymentController {
                 sort: { createdAt: -1 },
                 populate: [
                     { path: 'event', select: 'title description startDate banner' },
-                    { path: 'registration', select: 'registrationId' }
+                    { path: 'registration', select: 'registrationId' },
+                    // Provide user basics so frontend receipts can embed customer details without extra call
+                    { path: 'user', select: 'name email phone' }
                 ]
             };
 
@@ -404,30 +467,69 @@ class PaymentController {
     // Admin: Get Payment Statistics
     static async getPaymentStatistics(req, res) {
         try {
-            const { eventId } = req.params;
+            const { eventId } = req.query; // Make eventId optional via query param
+
+            let matchFilter = {};
+            if (eventId) {
+                matchFilter.event = mongoose.Types.ObjectId(eventId);
+            }
 
             // Total revenue
             const totalRevenue = await Payment.aggregate([
-                { $match: { event: mongoose.Types.ObjectId(eventId), status: 'paid' } },
+                { $match: { ...matchFilter, status: 'paid' } },
                 { $group: { _id: null, total: { $sum: '$amount' }, count: { $sum: 1 } } }
             ]);
 
             // Pending payments
             const pendingPayments = await Payment.countDocuments({
-                event: eventId,
+                ...matchFilter,
                 status: { $in: ['created', 'attempted'] }
             });
 
             // Failed payments
             const failedPayments = await Payment.countDocuments({
-                event: eventId,
+                ...matchFilter,
                 status: 'failed'
             });
 
             // Refunded payments
             const refundedPayments = await Payment.aggregate([
-                { $match: { event: mongoose.Types.ObjectId(eventId), status: 'refunded' } },
+                { $match: { ...matchFilter, status: 'refunded' } },
                 { $group: { _id: null, total: { $sum: '$refundAmount' }, count: { $sum: 1 } } }
+            ]);
+
+            // Payment method breakdown (only for paid payments)
+            const paymentMethods = await Payment.aggregate([
+                { $match: { ...matchFilter, status: 'paid', method: { $exists: true } } },
+                { $group: { _id: '$method', count: { $sum: 1 }, total: { $sum: '$amount' } } },
+                { $sort: { count: -1 } }
+            ]);
+
+            // Daily revenue for last 30 days
+            const thirtyDaysAgo = new Date();
+            thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+            const dailyRevenue = await Payment.aggregate([
+                {
+                    $match: {
+                        ...matchFilter,
+                        status: 'paid',
+                        paidAt: { $gte: thirtyDaysAgo }
+                    }
+                },
+                {
+                    $group: {
+                        _id: {
+                            $dateToString: {
+                                format: '%Y-%m-%d',
+                                date: '$paidAt'
+                            }
+                        },
+                        revenue: { $sum: '$amount' },
+                        count: { $sum: 1 }
+                    }
+                },
+                { $sort: { _id: 1 } }
             ]);
 
             res.json({
@@ -438,9 +540,84 @@ class PaymentController {
                     pendingPayments,
                     failedPayments,
                     refundedAmount: refundedPayments[0]?.total || 0,
-                    refundedCount: refundedPayments[0]?.count || 0
+                    refundedCount: refundedPayments[0]?.count || 0,
+                    paymentMethods,
+                    dailyRevenue
                 }
             });
+        } catch (error) {
+            console.error('Error in getPaymentStatistics:', error);
+            res.status(500).json({
+                success: false,
+                message: error.message
+            });
+        }
+    }
+
+    // Admin: Export Payments to CSV
+    static async exportPayments(req, res) {
+        try {
+            // Build filters
+            const filters = {};
+            if (req.query.status) filters.status = req.query.status;
+            if (req.query.eventId) filters.event = req.query.eventId;
+            if (req.query.userId) filters.user = req.query.userId;
+            if (req.query.startDate || req.query.endDate) {
+                filters.createdAt = {};
+                if (req.query.startDate) filters.createdAt.$gte = new Date(req.query.startDate);
+                if (req.query.endDate) filters.createdAt.$lte = new Date(req.query.endDate);
+            }
+
+            // Get all payments (no pagination for export)
+            const payments = await Payment.find(filters)
+                .populate('user', 'name email')
+                .populate('event', 'title eventType')
+                .sort({ createdAt: -1 });
+
+            // Create CSV content
+            const csvHeader = [
+                'Payment ID',
+                'User Name',
+                'User Email',
+                'Event Title',
+                'Event Type',
+                'Amount',
+                'Currency',
+                'Status',
+                'Payment Method',
+                'Razorpay Order ID',
+                'Razorpay Payment ID',
+                'Created At',
+                'Paid At',
+                'Refund Amount',
+                'Refund Reason',
+                'Refunded At'
+            ].join(',');
+
+            const csvRows = payments.map(payment => [
+                payment._id,
+                payment.user?.name || 'Unknown',
+                payment.user?.email || 'Unknown',
+                payment.event?.title || 'Event Deleted',
+                payment.event?.eventType || 'N/A',
+                payment.amount,
+                payment.currency || 'INR',
+                payment.status,
+                payment.method || 'N/A',
+                payment.razorpayOrderId,
+                payment.razorpayPaymentId || 'N/A',
+                payment.createdAt.toISOString(),
+                payment.paidAt ? payment.paidAt.toISOString() : 'N/A',
+                payment.refundAmount || 0,
+                payment.refundReason || 'N/A',
+                payment.refundedAt ? payment.refundedAt.toISOString() : 'N/A'
+            ].map(field => `"${field}"`).join(','));
+
+            const csvContent = [csvHeader, ...csvRows].join('\n');
+
+            res.setHeader('Content-Type', 'text/csv');
+            res.setHeader('Content-Disposition', `attachment; filename=payments-${new Date().toISOString().split('T')[0]}.csv`);
+            res.send(csvContent);
         } catch (error) {
             res.status(500).json({
                 success: false,

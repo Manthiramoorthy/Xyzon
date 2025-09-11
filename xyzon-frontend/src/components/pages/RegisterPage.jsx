@@ -1,7 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../auth/AuthContext';
-import { FiMail, FiLock, FiUser, FiEye, FiEyeOff, FiAlertCircle } from 'react-icons/fi';
+import ICONS from '../../constants/icons';
+import { FiMail, FiLock, FiUser, FiAlertCircle } from 'react-icons/fi';
 import '../../auth/authStyles.css';
 
 export default function RegisterPage() {
@@ -54,7 +55,7 @@ export default function RegisterPage() {
                         <div className="auth-input-wrap">
                             <FiLock className="auth-icon" />
                             <input id="reg-password" className="auth-input" name="password" type={showPwd ? 'text' : 'password'} value={form.password} onChange={onChange} required minLength={8} placeholder="Min 8 characters" autoComplete="new-password" />
-                            <button type="button" onClick={() => setShowPwd(s => !s)} className="auth-eye-btn">{showPwd ? <FiEyeOff /> : <FiEye />}</button>
+                            <button type="button" onClick={() => setShowPwd(s => !s)} className="auth-eye-btn">{showPwd ? <ICONS.HIDE /> : <ICONS.VIEW />}</button>
                         </div>
                         <PasswordHints pwd={form.password} />
                         <div className="strength-track" aria-hidden="true">

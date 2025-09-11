@@ -29,6 +29,7 @@ import UserPayments from './pages/UserPayments';
 import UserProfile from './pages/UserProfile';
 import UserManagement from './pages/UserManagement';
 import EventStats from './pages/EventStats';
+import AdminEventSummary from './pages/AdminEventSummary';
 import EventRegistrations from './pages/EventRegistrations';
 import EventCertificates from './pages/EventCertificates';
 import EventRegister from './pages/EventRegister';
@@ -71,6 +72,7 @@ export default function AppRouter() {
                                     <Route path="certificate" element={<CertificateGenerator />} />
                                     <Route path="send-mail" element={<SendPersonalizedMail />} />
                                     <Route path="events" element={<AdminEventList />} />
+                                    <Route path="summary" element={<AdminEventSummary />} />
                                     <Route path="events/create" element={<EventForm />} />
                                     <Route path="events/:id/edit" element={<EventForm />} />
                                     <Route path="events/:id/stats" element={<EventStats />} />

@@ -20,6 +20,14 @@ class CertificateController {
                 });
             }
 
+            // Prevent access to revoked / expired certificate content
+            if (certificate.status !== 'issued') {
+                return res.status(403).json({
+                    success: false,
+                    message: 'Certificate is not available (status: ' + certificate.status + ')'
+                });
+            }
+
             res.json({
                 success: true,
                 data: certificate
@@ -162,6 +170,42 @@ class CertificateController {
             res.json({
                 success: true,
                 message: 'Certificate revoked successfully',
+                data: certificate
+            });
+        } catch (error) {
+            res.status(500).json({
+                success: false,
+                message: error.message
+            });
+        }
+    }
+
+    // Admin: Re-Issue (restore) a revoked certificate
+    static async reissueCertificate(req, res) {
+        try {
+            const certificate = await Certificate.findById(req.params.id);
+
+            if (!certificate) {
+                return res.status(404).json({
+                    success: false,
+                    message: 'Certificate not found'
+                });
+            }
+
+            if (certificate.status !== 'revoked') {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Only revoked certificates can be re-issued'
+                });
+            }
+
+            certificate.status = 'issued';
+            certificate.issueDate = new Date(); // refresh issue date
+            await certificate.save();
+
+            res.json({
+                success: true,
+                message: 'Certificate re-issued successfully',
                 data: certificate
             });
         } catch (error) {

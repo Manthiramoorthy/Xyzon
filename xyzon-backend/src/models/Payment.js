@@ -32,6 +32,7 @@ const paymentSchema = new mongoose.Schema({
     paidAt: { type: Date },
     failedAt: { type: Date },
     refundedAt: { type: Date },
+    canceledAt: { type: Date },
 
     // Refund Info
     refundId: { type: String },

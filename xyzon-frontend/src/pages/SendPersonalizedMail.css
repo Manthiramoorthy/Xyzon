@@ -1,0 +1,82 @@
+/* SendPersonalizedMail.css - Responsive and modern styles for SendPersonalizedMail page */
+
+@media (max-width: 991.98px) {
+  .spm-row {
+    flex-direction: column;
+  }
+  .spm-col-lg-4, .spm-col-lg-8 {
+    max-width: 100%;
+    flex: 0 0 100%;
+  }
+  .spm-preview-box {
+    width: 100% !important;
+    min-width: 0 !important;
+    padding: 10px !important;
+  }
+}
+
+.spm-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+}
+.spm-col-lg-4 {
+  flex: 0 0 32%;
+  max-width: 32%;
+  min-width: 300px;
+}
+.spm-col-lg-8 {
+  flex: 1 1 65%;
+  max-width: 65%;
+  min-width: 320px;
+}
+.spm-preview-box {
+  background: #fff;
+  box-shadow: 0 0 8px rgba(0,0,0,0.05);
+  max-width: 100%;
+  width: 900px;
+  max-height: 460px;
+  min-height: 440px;
+  padding: 20px;
+  overflow-y: auto;
+  border-radius: 8px;
+}
+
+.spm-table-responsive {
+  overflow-x: auto;
+}
+
+.spm-card {
+  border-radius: 12px;
+}
+
+.spm-btn {
+  min-width: 120px;
+  font-weight: 600;
+  font-size: 1rem;
+}
+
+.spm-btn-group {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+  align-items: center;
+  margin: 1.5rem 0 1rem 0;
+}
+
+@media (max-width: 600px) {
+  .spm-btn-group {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+  .spm-btn {
+    min-width: 100%;
+    width: 100%;
+  }
+}
+
+.spm-attachment-list {
+  max-height: 120px;
+  overflow-y: auto;
+}

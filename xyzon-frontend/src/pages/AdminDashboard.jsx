@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { eventApi } from '../api/eventApi';
+import ICONS from '../constants/icons';
 import {
     FiCalendar,
     FiUsers,
     FiAward,
     FiTrendingUp,
-    FiPlus,
-    FiEye,
     FiClock
 } from 'react-icons/fi';
 
@@ -133,7 +132,7 @@ const AdminDashboard = () => {
                                             {new Date(event.startDate).toLocaleDateString()}
                                         </span>
                                         <span className={`event-status status-${event.status}`}>
-                                            {event.status === 'published' ? <FiEye size={14} /> : <FiClock size={14} />}
+                                            {event.status === 'published' ? <ICONS.VIEW size={14} /> : <FiClock size={14} />}
                                             {event.status}
                                         </span>
                                     </div>

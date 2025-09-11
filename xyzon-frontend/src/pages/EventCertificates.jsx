@@ -4,9 +4,10 @@ import { useToast } from '../context/ToastContext';
 import { eventApi, certificateApi } from '../api/eventApi';
 import * as certificateTemplateApi from '../api/certificateTemplateApi';
 import { generateCertificatePDF, previewCertificate } from '../utils/certificateUtils';
+import ICONS from '../constants/icons';
 import {
-    FaArrowLeft, FaCertificate, FaDownload, FaUsers, FaUpload,
-    FaEye, FaEnvelope, FaCheck, FaTimes, FaPlus, FaSpinner
+    FaCertificate, FaUsers, FaUpload,
+    FaEnvelope, FaCheck, FaTimes, FaSpinner
 } from 'react-icons/fa';
 
 export default function EventCertificates() {
@@ -25,6 +26,8 @@ export default function EventCertificates() {
     const [downloadingCertificates, setDownloadingCertificates] = useState({});
     const [previewTemplate, setPreviewTemplate] = useState(null);
     const [showPreview, setShowPreview] = useState(false);
+    const [revokingId, setRevokingId] = useState(null);
+    const [reissuingId, setReissuingId] = useState(null);
 
     useEffect(() => {
         loadData();
@@ -79,9 +82,24 @@ export default function EventCertificates() {
         }
     };
 
+    const canIssueForEvent = () => {
+        if (!event) return false;
+        // Allow issuing if event hasCertificate flag true AND event status is published/completed/ongoing
+        // Using eventStatus virtual logic replicated: upcoming/ongoing/completed allowed; disallow draft/cancelled
+        const now = new Date();
+        const isCancelled = event.status === 'cancelled';
+        const isDraft = event.status === 'draft';
+        const timePhase = now < new Date(event.startDate) ? 'upcoming' : (now > new Date(event.endDate) ? 'completed' : 'ongoing');
+        return !isCancelled && !isDraft && event.hasCertificate && ['upcoming', 'ongoing', 'completed'].includes(timePhase);
+    };
+
     const handleBulkIssue = async () => {
         if (!selectedTemplate) {
             toast.error('Please select a certificate template first.');
+            return;
+        }
+        if (!canIssueForEvent()) {
+            toast.error('Event not eligible for issuing certificates now.');
             return;
         }
 
@@ -117,6 +135,10 @@ export default function EventCertificates() {
     const handleIndividualIssue = async (registrationId) => {
         if (!selectedTemplate) {
             toast.error('Please select a certificate template first.');
+            return;
+        }
+        if (!canIssueForEvent()) {
+            toast.error('Event not eligible for issuing certificates now.');
             return;
         }
 
@@ -156,7 +178,7 @@ export default function EventCertificates() {
             setShowPreview(true);
         } catch (error) {
             console.error('Error previewing template:', error);
-            toast.error('Failed to preview template: ' + error.message);
+            toast.error('Failed to preview template: ' + (error.message || 'Unknown error'));
         }
     };
 
@@ -235,17 +257,47 @@ export default function EventCertificates() {
     };
 
     const hasCertificate = (registrationId) => {
-        // Check if the registration itself has certificateIssued flag
-        const registration = registrations.find(reg => reg._id === registrationId);
-        if (registration && registration.certificateIssued) {
-            return true;
-        }
+        return !!getCertificateForRegistration(registrationId);
+    };
 
-        // Fallback: check in certificates array by registration field
-        return certificates.some(cert =>
-            cert.registration === registrationId ||
-            cert.registrationId === registrationId
-        );
+    const getCertificateForRegistration = (registrationId) => {
+        return certificates.find(cert => {
+            // cert.registration is an ObjectId (string) in current backend response (not populated)
+            // If later populated, it may become an object with _id
+            const regRef = (cert.registration && typeof cert.registration === 'object') ? cert.registration._id : cert.registration;
+            return String(regRef) === String(registrationId);
+        });
+    };
+
+    const handleRevokeCertificate = async (certificate) => {
+        const confirmed = await confirm(`Revoke certificate for ${certificate.recipientName}? This cannot be undone.`);
+        if (!confirmed) return;
+        setRevokingId(certificate._id);
+        try {
+            await certificateApi.revokeCertificate(certificate._id);
+            toast.success('Certificate revoked');
+            // Update local state without full reload
+            setCertificates(prev => prev.map(c => c._id === certificate._id ? { ...c, status: 'revoked' } : c));
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Failed to revoke certificate');
+        } finally {
+            setRevokingId(null);
+        }
+    };
+
+    const handleReissueCertificate = async (certificate) => {
+        const confirmed = await confirm(`Re-issue certificate for ${certificate.recipientName}?`);
+        if (!confirmed) return;
+        setReissuingId(certificate._id);
+        try {
+            await certificateApi.reissueCertificate(certificate._id);
+            toast.success('Certificate re-issued');
+            setCertificates(prev => prev.map(c => c._id === certificate._id ? { ...c, status: 'issued', issueDate: new Date().toISOString() } : c));
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Failed to re-issue certificate');
+        } finally {
+            setReissuingId(null);
+        }
     };
 
     if (loading) {
@@ -264,10 +316,10 @@ export default function EventCertificates() {
         return (
             <div className="container py-5">
                 <div className="alert alert-danger" role="alert">
-                    {error}
+                    {typeof error === 'string' ? error : error.message || 'An error occurred'}
                 </div>
                 <Link to="/admin/events" className="btn btn-primary">
-                    <FaArrowLeft className="me-2" />
+                    <ICONS.BACK className="me-2" />
                     Back to Events
                 </Link>
             </div>
@@ -281,7 +333,7 @@ export default function EventCertificates() {
                     Event not found
                 </div>
                 <Link to="/admin/events" className="btn btn-primary">
-                    <FaArrowLeft className="me-2" />
+                    <ICONS.BACK className="me-2" />
                     Back to Events
                 </Link>
             </div>
@@ -313,7 +365,8 @@ export default function EventCertificates() {
                     <button
                         className="btn btn-primary btn-sm"
                         onClick={handleBulkIssue}
-                        disabled={confirmedRegistrations.length === 0 || !selectedTemplate}
+                        disabled={confirmedRegistrations.length === 0 || !selectedTemplate || !canIssueForEvent()}
+                        title={!canIssueForEvent() ? 'Event not eligible for issuing now' : 'Issue all certificates'}
                     >
                         <FaCertificate className="me-1" />
                         <span className="d-none d-sm-inline">Issue All </span>Certificates
@@ -370,7 +423,7 @@ export default function EventCertificates() {
                                     onClick={() => selectedTemplate && handlePreviewTemplate(selectedTemplate)}
                                     disabled={!selectedTemplate}
                                 >
-                                    <FaEye className="me-1" />
+                                    <ICONS.VIEW className="me-1" />
                                     Preview Template
                                 </button>
                             </div>
@@ -381,7 +434,8 @@ export default function EventCertificates() {
                                 <button
                                     className="btn btn-success w-100"
                                     onClick={handleBulkIssue}
-                                    disabled={issuingBulk || confirmedRegistrations.length === 0 || !selectedTemplate}
+                                    disabled={issuingBulk || confirmedRegistrations.length === 0 || !selectedTemplate || !canIssueForEvent()}
+                                    title={!canIssueForEvent() ? 'Event not eligible for issuing now' : 'Issue all certificates'}
                                 >
                                     {issuingBulk ? (
                                         <>
@@ -432,7 +486,8 @@ export default function EventCertificates() {
                                 </thead>
                                 <tbody>
                                     {confirmedRegistrations.map(registration => {
-                                        const hasCurrentCert = hasCertificate(registration._id);
+                                        const cert = getCertificateForRegistration(registration._id);
+                                        const hasCurrentCert = !!cert;
                                         return (
                                             <tr key={registration._id || Math.random()}>
                                                 <td>
@@ -454,10 +509,17 @@ export default function EventCertificates() {
                                                 </td>
                                                 <td className="text-center">
                                                     {hasCurrentCert ? (
-                                                        <span className="badge bg-success">
-                                                            <FaCheck className="me-1" />
-                                                            <span className="d-none d-sm-inline">Issued</span>
-                                                        </span>
+                                                        cert.status === 'issued' ? (
+                                                            <span className="badge bg-success">
+                                                                <FaCheck className="me-1" />
+                                                                <span className="d-none d-sm-inline">Issued</span>
+                                                            </span>
+                                                        ) : (
+                                                            <span className="badge bg-danger">
+                                                                <FaTimes className="me-1" />
+                                                                <span className="d-none d-sm-inline text-uppercase">{cert.status}</span>
+                                                            </span>
+                                                        )
                                                     ) : (
                                                         <span className="badge bg-warning">
                                                             <FaTimes className="me-1" />
@@ -469,37 +531,55 @@ export default function EventCertificates() {
                                                     <div className="d-flex gap-1 justify-content-center flex-wrap">
                                                         {hasCurrentCert ? (
                                                             <>
-                                                                <button
-                                                                    className="btn btn-outline-primary btn-sm"
-                                                                    onClick={() => handleViewCertificate(registration._id)}
-                                                                    title="View Certificate"
-                                                                >
-                                                                    <FaEye />
-                                                                </button>
-                                                                <button
-                                                                    className="btn btn-outline-success btn-sm"
-                                                                    onClick={() => handleDownloadCertificate(registration._id, registration.name)}
-                                                                    title="Download Certificate as PDF"
-                                                                    disabled={downloadingCertificates[registration._id]}
-                                                                >
-                                                                    {downloadingCertificates[registration._id] ? (
-                                                                        <FaSpinner className="spinner-border spinner-border-sm" />
-                                                                    ) : (
-                                                                        <FaDownload />
-                                                                    )}
-                                                                </button>
-                                                                <button
-                                                                    className="btn btn-outline-secondary btn-sm"
-                                                                    title="Email Certificate"
-                                                                >
-                                                                    <FaEnvelope />
-                                                                </button>
+                                                                {cert.status === 'issued' && (
+                                                                    <>
+                                                                        <button
+                                                                            className="btn btn-outline-primary btn-sm"
+                                                                            onClick={() => handleViewCertificate(registration._id)}
+                                                                            title="View Certificate"
+                                                                        >
+                                                                            <ICONS.VIEW />
+                                                                        </button>
+                                                                        <button
+                                                                            className="btn btn-outline-success btn-sm"
+                                                                            onClick={() => handleDownloadCertificate(registration._id, registration.name)}
+                                                                            title="Download Certificate as PDF"
+                                                                            disabled={downloadingCertificates[registration._id]}
+                                                                        >
+                                                                            {downloadingCertificates[registration._id] ? (
+                                                                                <FaSpinner className="spinner-border spinner-border-sm" />
+                                                                            ) : (
+                                                                                <ICONS.DOWNLOAD />
+                                                                            )}
+                                                                        </button>
+                                                                    </>
+                                                                )}
+                                                                {cert.status === 'issued' ? (
+                                                                    <button
+                                                                        className="btn btn-outline-danger btn-sm"
+                                                                        onClick={() => handleRevokeCertificate(cert)}
+                                                                        disabled={revokingId === cert._id}
+                                                                        title="Revoke Certificate"
+                                                                    >
+                                                                        {revokingId === cert._id ? <FaSpinner className="spinner-border spinner-border-sm" /> : <FaTimes />}
+                                                                    </button>
+                                                                ) : (
+                                                                    <button
+                                                                        className="btn btn-outline-warning btn-sm"
+                                                                        onClick={() => handleReissueCertificate(cert)}
+                                                                        disabled={reissuingId === cert._id}
+                                                                        title="Re-Issue Certificate"
+                                                                    >
+                                                                        {reissuingId === cert._id ? <FaSpinner className="spinner-border spinner-border-sm" /> : <FaCertificate />}
+                                                                    </button>
+                                                                )}
                                                             </>
                                                         ) : (
                                                             <button
                                                                 className="btn btn-primary btn-sm"
                                                                 onClick={() => handleIndividualIssue(registration._id)}
-                                                                disabled={issuingCertificate === registration._id || !selectedTemplate}
+                                                                disabled={issuingCertificate === registration._id || !selectedTemplate || !canIssueForEvent()}
+                                                                title={!canIssueForEvent() ? 'Event not eligible for issuing now' : 'Issue certificate'}
                                                             >
                                                                 {issuingCertificate === registration._id ? (
                                                                     <>
@@ -508,7 +588,7 @@ export default function EventCertificates() {
                                                                     </>
                                                                 ) : (
                                                                     <>
-                                                                        <FaPlus className="me-1" />
+                                                                        <ICONS.ADD className="me-1" />
                                                                         <span className="d-none d-sm-inline">Issue Certificate</span>
                                                                     </>
                                                                 )}

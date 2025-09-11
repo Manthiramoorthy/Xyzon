@@ -747,7 +747,8 @@ class EventController {
             const certificates = await Certificate.find({ user: req.user.id })
                 .populate('event', 'title description startDate endDate')
                 .populate('registration', 'registrationId status')
-                .sort({ issuedAt: -1 });
+                // Sort by issueDate (field present in schema) instead of non-existent issuedAt
+                .sort({ issueDate: -1 });
 
             res.json({
                 success: true,
@@ -822,6 +823,167 @@ class EventController {
                 success: false,
                 message: error.message
             });
+        }
+    }
+
+    // Admin: Overall Event Management Summary (global + per-event)
+    static async getAdminSummary(req, res) {
+        try {
+            const { startDate, endDate, eventType, category, status, limit = 100 } = req.query;
+
+            // Build event filter
+            const eventFilter = {};
+            if (eventType) eventFilter.eventType = eventType;
+            if (category) eventFilter.category = category;
+            if (status) eventFilter.status = status;
+            if (startDate || endDate) {
+                eventFilter.startDate = {};
+                if (startDate) eventFilter.startDate.$gte = new Date(startDate);
+                if (endDate) eventFilter.startDate.$lte = new Date(endDate);
+            }
+
+            const events = await Event.find(eventFilter).select('title startDate endDate status price currency eventType category maxParticipants currentParticipants createdAt');
+            const eventIds = events.map(e => e._id);
+
+            // If no events, return empty summary
+            if (eventIds.length === 0) {
+                return res.json({
+                    success: true,
+                    data: {
+                        filters: { startDate, endDate, eventType, category, status },
+                        global: {
+                            totalEvents: 0,
+                            totalRegistrations: 0,
+                            totalAttended: 0,
+                            certificatesIssued: 0,
+                            totalRevenue: 0,
+                            refundedAmount: 0,
+                            repeatParticipants: 0,
+                            repeatParticipantPercent: 0,
+                            uniqueParticipants: 0,
+                            averageAttendanceRate: 0
+                        },
+                        perEvent: [],
+                        topEvents: []
+                    }
+                });
+            }
+
+            // Registrations aggregate
+            const registrationsAgg = await EventRegistration.aggregate([
+                { $match: { event: { $in: eventIds } } },
+                {
+                    $group: {
+                        _id: '$event',
+                        registrations: { $sum: 1 },
+                        attended: { $sum: { $cond: [{ $eq: ['$status', 'attended'] }, 1, 0] } },
+                        users: { $addToSet: '$user' }
+                    }
+                }
+            ]);
+
+            // Build maps for quick lookup
+            const regMap = new Map();
+            let totalRegistrations = 0;
+            let totalAttended = 0;
+            const participantUserIds = new Set();
+            registrationsAgg.forEach(r => {
+                regMap.set(r._id.toString(), r);
+                totalRegistrations += r.registrations;
+                totalAttended += r.attended;
+                r.users.forEach(u => participantUserIds.add(u.toString()));
+            });
+
+            // Repeat participants (users with >1 registrations across filtered events)
+            const repeatAgg = await EventRegistration.aggregate([
+                { $match: { event: { $in: eventIds } } },
+                { $group: { _id: '$user', count: { $sum: 1 } } },
+                { $match: { count: { $gt: 1 } } },
+                { $group: { _id: null, total: { $sum: 1 } } }
+            ]);
+            const repeatParticipants = repeatAgg[0]?.total || 0;
+            const uniqueParticipants = participantUserIds.size;
+            const repeatParticipantPercent = uniqueParticipants > 0 ? Number(((repeatParticipants / uniqueParticipants) * 100).toFixed(2)) : 0;
+
+            // Certificates issued
+            const certificatesIssued = await Certificate.countDocuments({ event: { $in: eventIds } });
+
+            // Payments aggregates
+            const revenueAgg = await Payment.aggregate([
+                { $match: { event: { $in: eventIds }, status: 'paid' } },
+                { $group: { _id: '$event', revenue: { $sum: '$amount' }, paidCount: { $sum: 1 } } }
+            ]);
+            const revenueMap = new Map();
+            let totalRevenue = 0;
+            revenueAgg.forEach(r => { revenueMap.set(r._id.toString(), r); totalRevenue += r.revenue; });
+
+            const refundAgg = await Payment.aggregate([
+                { $match: { event: { $in: eventIds }, status: 'refunded' } },
+                { $group: { _id: null, refundedAmount: { $sum: '$refundAmount' } } }
+            ]);
+            const refundedAmount = refundAgg[0]?.refundedAmount || 0;
+
+            // Certificates per event
+            const certificateAgg = await Certificate.aggregate([
+                { $match: { event: { $in: eventIds } } },
+                { $group: { _id: '$event', certificates: { $sum: 1 } } }
+            ]);
+            const certMap = new Map();
+            certificateAgg.forEach(c => certMap.set(c._id.toString(), c.certificates));
+
+            // Compose per-event list
+            const perEvent = events.map(ev => {
+                const idStr = ev._id.toString();
+                const regInfo = regMap.get(idStr) || { registrations: 0, attended: 0 };
+                const revInfo = revenueMap.get(idStr) || { revenue: 0, paidCount: 0 };
+                const certCount = certMap.get(idStr) || 0;
+                const attendanceRate = regInfo.registrations > 0 ? Number(((regInfo.attended / regInfo.registrations) * 100).toFixed(2)) : 0;
+                return {
+                    eventId: ev._id,
+                    title: ev.title,
+                    status: ev.status,
+                    startDate: ev.startDate,
+                    endDate: ev.endDate,
+                    eventType: ev.eventType,
+                    category: ev.category,
+                    maxParticipants: ev.maxParticipants,
+                    registrations: regInfo.registrations,
+                    attended: regInfo.attended,
+                    certificatesIssued: certCount,
+                    revenue: revInfo.revenue,
+                    paidCount: revInfo.paidCount,
+                    attendanceRate
+                };
+            }).sort((a, b) => b.registrations - a.registrations);
+
+            const topEvents = perEvent.slice(0, Math.min(5, perEvent.length));
+
+            const averageAttendanceRate = perEvent.length > 0
+                ? Number((perEvent.reduce((s, e) => s + e.attendanceRate, 0) / perEvent.length).toFixed(2))
+                : 0;
+
+            res.json({
+                success: true,
+                data: {
+                    filters: { startDate, endDate, eventType, category, status },
+                    global: {
+                        totalEvents: events.length,
+                        totalRegistrations,
+                        totalAttended,
+                        certificatesIssued,
+                        totalRevenue,
+                        refundedAmount,
+                        repeatParticipants,
+                        repeatParticipantPercent,
+                        uniqueParticipants,
+                        averageAttendanceRate
+                    },
+                    perEvent: perEvent.slice(0, Number(limit) || 100),
+                    topEvents
+                }
+            });
+        } catch (error) {
+            res.status(500).json({ success: false, message: error.message });
         }
     }
 }

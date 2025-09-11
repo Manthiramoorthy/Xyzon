@@ -1,0 +1,79 @@
+/* SearchBar Component Styles */
+.search-bar-wrapper .input-group-text {
+    border-right: none;
+    background-color: #f8f9fa;
+    color: #6c757d;
+}
+
+.search-bar-wrapper .form-control {
+    border-left: none;
+    padding-left: 0.5rem;
+}
+
+.search-bar-wrapper .form-control:focus {
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    border-color: #86b7fe;
+    border-left: none;
+}
+
+.search-bar-wrapper .input-group:focus-within .input-group-text {
+    border-color: #86b7fe;
+}
+
+.search-bar-wrapper .btn {
+    border-left: none;
+}
+
+.search-bar-wrapper .btn:hover {
+    background-color: #e9ecef;
+}
+
+.search-bar-wrapper .btn:focus {
+    box-shadow: none;
+}
+
+.search-bar-wrapper .btn:active {
+    background-color: #dee2e6;
+}
+
+/* Focus state for the entire input group */
+.search-bar-wrapper .input-group:focus-within {
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    border-radius: 0.375rem;
+}
+
+.search-bar-wrapper .input-group:focus-within .input-group-text,
+.search-bar-wrapper .input-group:focus-within .form-control,
+.search-bar-wrapper .input-group:focus-within .btn {
+    border-color: #86b7fe;
+}
+
+/* Disabled state */
+.search-bar-wrapper .form-control:disabled {
+    background-color: #e9ecef;
+    opacity: 1;
+}
+
+.search-bar-wrapper .form-control:disabled ~ .input-group-text {
+    background-color: #e9ecef;
+}
+
+/* Size variations */
+.search-bar-wrapper.search-bar-sm .input-group-text {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+}
+
+.search-bar-wrapper.search-bar-lg .input-group-text {
+    padding: 0.5rem 1rem;
+    font-size: 1.25rem;
+}
+
+/* Animation for clear button */
+.search-bar-wrapper .btn {
+    transition: all 0.2s ease-in-out;
+}
+
+.search-bar-wrapper .btn:hover {
+    transform: scale(1.05);
+}

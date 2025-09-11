@@ -1,11 +1,16 @@
 import React, { useState } from 'react';
 import { enquiryApi } from '../api/enquiryApi';
+import ICONS from '../constants/icons';
 import './EnquiryDetailsModal.css';
 
 const EnquiryDetailsModal = ({ enquiry, onClose, onUpdate }) => {
     const [adminNote, setAdminNote] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [statusUpdating, setStatusUpdating] = useState(false);
+    const [priorityUpdating, setPriorityUpdating] = useState(false);
+    const [localStatus, setLocalStatus] = useState(enquiry.status);
+    const [localPriority, setLocalPriority] = useState(enquiry.priority);
 
     const handleAddNote = async () => {
         if (!adminNote.trim()) return;
@@ -38,19 +43,55 @@ const EnquiryDetailsModal = ({ enquiry, onClose, onUpdate }) => {
         });
     };
 
+    const updateStatus = async (value) => {
+        if (value === localStatus) return;
+        try {
+            setStatusUpdating(true);
+            setLocalStatus(value);
+            const response = await enquiryApi.updateEnquiry(enquiry._id, { status: value });
+            if (!response.success) throw new Error(response.message || 'Failed');
+            onUpdate();
+        } catch (e) {
+            setError('Failed to update status: ' + (e.message || 'Unknown error'));
+            setLocalStatus(enquiry.status);
+        } finally {
+            setStatusUpdating(false);
+        }
+    };
+
+    const updatePriority = async (value) => {
+        if (value === localPriority) return;
+        try {
+            setPriorityUpdating(true);
+            setLocalPriority(value);
+            const response = await enquiryApi.updateEnquiry(enquiry._id, { priority: value });
+            if (!response.success) throw new Error(response.message || 'Failed');
+            onUpdate();
+        } catch (e) {
+            setError('Failed to update priority: ' + (e.message || 'Unknown error'));
+            setLocalPriority(enquiry.priority);
+        } finally {
+            setPriorityUpdating(false);
+        }
+    };
+
     return (
         <div className="modal-overlay" onClick={onClose}>
             <div className="modal-content enquiry-details-modal" onClick={(e) => e.stopPropagation()}>
                 <div className="modal-header">
                     <h2>Enquiry Details</h2>
-                    <button className="close-btn" onClick={onClose}>×</button>
+                    <button className="close-btn" onClick={onClose}>
+                        <ICONS.CLOSE />
+                    </button>
                 </div>
 
                 <div className="modal-body">
                     {error && (
                         <div className="error-message">
                             <span>⚠️ {error}</span>
-                            <button onClick={() => setError('')}>×</button>
+                            <button onClick={() => setError('')}>
+                                <ICONS.CLOSE />
+                            </button>
                         </div>
                     )}
 
@@ -78,15 +119,37 @@ const EnquiryDetailsModal = ({ enquiry, onClose, onUpdate }) => {
                             </div>
                             <div className="info-item">
                                 <label>Status:</label>
-                                <span className={`status-badge status-${enquiry.status}`}>
-                                    {enquiry.status.replace('_', ' ')}
-                                </span>
+                                <div className="inline-edit-field">
+                                    <select
+                                        className={`inline-select status-${localStatus}`}
+                                        value={localStatus}
+                                        disabled={statusUpdating}
+                                        onChange={(e) => updateStatus(e.target.value)}
+                                    >
+                                        <option value="new">New</option>
+                                        <option value="in_progress">In Progress</option>
+                                        <option value="resolved">Resolved</option>
+                                        <option value="closed">Closed</option>
+                                    </select>
+                                    {statusUpdating && <span className="spinner small ms-2" />}
+                                </div>
                             </div>
                             <div className="info-item">
                                 <label>Priority:</label>
-                                <span className={`priority-badge priority-${enquiry.priority}`}>
-                                    {enquiry.priority}
-                                </span>
+                                <div className="inline-edit-field">
+                                    <select
+                                        className={`inline-select priority-${localPriority}`}
+                                        value={localPriority}
+                                        disabled={priorityUpdating}
+                                        onChange={(e) => updatePriority(e.target.value)}
+                                    >
+                                        <option value="low">Low</option>
+                                        <option value="medium">Medium</option>
+                                        <option value="high">High</option>
+                                        <option value="urgent">Urgent</option>
+                                    </select>
+                                    {priorityUpdating && <span className="spinner small ms-2" />}
+                                </div>
                             </div>
                             <div className="info-item">
                                 <label>Submitted:</label>
@@ -216,7 +279,10 @@ const EnquiryDetailsModal = ({ enquiry, onClose, onUpdate }) => {
                                         Adding...
                                     </>
                                 ) : (
-                                    'Add Note'
+                                    <>
+                                        <ICONS.ADD className="me-2" />
+                                        Add Note
+                                    </>
                                 )}
                             </button>
                         </div>
@@ -225,6 +291,7 @@ const EnquiryDetailsModal = ({ enquiry, onClose, onUpdate }) => {
 
                 <div className="modal-footer">
                     <button onClick={onClose} className="btn-secondary">
+                        <ICONS.CLOSE className="me-2" />
                         Close
                     </button>
                 </div>

@@ -2,10 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useToast } from '../context/ToastContext';
 import { eventApi, registrationApi, certificateApi } from '../api/eventApi';
+import SearchBar from '../components/SearchBar';
+import ICONS, { ICON_SIZES, ICON_COLORS } from '../constants/icons';
 import {
     FaArrowLeft, FaUsers, FaDownload, FaEnvelope, FaCertificate,
-    FaSearch, FaFilter, FaCheckCircle, FaTimesCircle, FaClock,
-    FaEdit, FaTrash, FaEye, FaUserCheck, FaUserTimes, FaSpinner
+    FaFilter, FaCheckCircle, FaTimesCircle, FaClock,
+    FaUserCheck, FaUserTimes, FaSpinner
 } from 'react-icons/fa';
 
 export default function EventRegistrations() {
@@ -420,18 +422,12 @@ export default function EventRegistrations() {
                 <div className="card-body">
                     <div className="row g-3">
                         <div className="col-lg-6 col-md-12">
-                            <div className="input-group">
-                                <span className="input-group-text">
-                                    <FaSearch />
-                                </span>
-                                <input
-                                    type="text"
-                                    className="form-control"
-                                    placeholder="Search by name, email, or phone..."
-                                    value={filters.search}
-                                    onChange={(e) => handleFilterChange('search', e.target.value)}
-                                />
-                            </div>
+                            <SearchBar
+                                value={filters.search}
+                                onChange={(value) => handleFilterChange('search', value)}
+                                placeholder="Search by name, email, or phone..."
+                                onClear={() => handleFilterChange('search', '')}
+                            />
                         </div>
                         <div className="col-lg-2 col-md-4 col-sm-6">
                             <select

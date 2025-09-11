@@ -2,10 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { eventApi } from '../api/eventApi';
 import { useToast } from '../context/ToastContext';
 import { Link } from 'react-router-dom';
+import SearchBar from '../components/SearchBar';
+import ICONS from '../constants/icons';
 import {
-    FaPlus, FaEdit, FaTrash, FaEye, FaUsers, FaCalendarAlt,
+    FaUsers, FaCalendarAlt,
     FaChartBar, FaEnvelope, FaCertificate, FaTicketAlt,
-    FaSearch, FaFilter, FaExternalLinkAlt
+    FaPlus
 } from 'react-icons/fa';
 
 const EventCard = ({ event, onEdit, onDelete, onViewStats, onSendReminders }) => {
@@ -82,14 +84,14 @@ const EventCard = ({ event, onEdit, onDelete, onViewStats, onSendReminders }) =>
                             to={`/events/${event._id}`}
                             className="btn btn-outline-primary btn-sm flex-fill"
                         >
-                            <FaEye className="me-1" />
+                            <ICONS.VIEW className="me-1" />
                             <span className="d-none d-sm-inline">View</span>
                         </Link>
                         <button
                             className="btn btn-outline-secondary btn-sm flex-fill"
                             onClick={() => onEdit(event)}
                         >
-                            <FaEdit className="me-1" />
+                            <ICONS.EDIT className="me-1" />
                             <span className="d-none d-sm-inline">Edit</span>
                         </button>
                         <button
@@ -132,7 +134,7 @@ const EventCard = ({ event, onEdit, onDelete, onViewStats, onSendReminders }) =>
                             className="btn btn-outline-danger btn-sm flex-fill"
                             onClick={() => onDelete(event)}
                         >
-                            <FaTrash className="me-1" />
+                            <ICONS.DELETE className="me-1" />
                             <span className="d-none d-sm-inline">Delete</span>
                         </button>
                     </div>
@@ -252,7 +254,7 @@ export default function AdminEventList() {
                             My Events
                         </h1>
                         <Link to="/admin/events/create" className="btn btn-primary">
-                            <FaPlus className="me-1 me-md-2" />
+                            <ICONS.ADD className="me-1 me-md-2" />
                             <span className="d-none d-sm-inline">Create </span>Event
                         </Link>
                     </div>
@@ -266,18 +268,12 @@ export default function AdminEventList() {
                         <div className="card-body">
                             <div className="row g-3">
                                 <div className="col-lg-6 col-md-12">
-                                    <div className="input-group">
-                                        <span className="input-group-text">
-                                            <FaSearch />
-                                        </span>
-                                        <input
-                                            type="text"
-                                            className="form-control"
-                                            placeholder="Search events..."
-                                            value={filters.search}
-                                            onChange={(e) => handleFilterChange('search', e.target.value)}
-                                        />
-                                    </div>
+                                    <SearchBar
+                                        value={filters.search}
+                                        onChange={(value) => handleFilterChange('search', value)}
+                                        placeholder="Search events..."
+                                        onClear={() => handleFilterChange('search', '')}
+                                    />
                                 </div>
                                 <div className="col-lg-3 col-md-6">
                                     <select

@@ -28,6 +28,7 @@ router.post('/upload/images', auth('admin'), EventController.uploadEventImages);
 
 // Admin: Event management
 router.get('/admin/my-events', auth('admin'), EventController.getMyEvents);
+router.get('/admin/summary', auth('admin'), EventController.getAdminSummary);
 router.get('/:id/registrations', auth('admin'), EventController.getEventRegistrations);
 router.get('/:id/statistics', auth('admin'), EventController.getEventStatistics);
 

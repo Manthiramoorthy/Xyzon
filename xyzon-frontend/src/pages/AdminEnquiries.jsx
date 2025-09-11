@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useToast } from '../context/ToastContext';
 import { enquiryApi } from '../api/enquiryApi';
+import SearchBar from '../components/SearchBar';
 import EnquiryDetailsModal from '../components/EnquiryDetailsModal';
 import ResponseModal from '../components/ResponseModal';
+import ICONS from '../constants/icons';
 import './AdminEnquiries.css';
 
 const AdminEnquiries = () => {
@@ -28,9 +30,7 @@ const AdminEnquiries = () => {
     const [showDetailsModal, setShowDetailsModal] = useState(false);
     const [showResponseModal, setShowResponseModal] = useState(false);
 
-    // Selection states for bulk actions
-    const [selectedEnquiries, setSelectedEnquiries] = useState([]);
-    const [bulkAction, setBulkAction] = useState('');
+    // (Row selection & bulk actions removed per request)
 
     const statusOptions = [
         { value: '', label: 'All Status' },
@@ -141,52 +141,7 @@ const AdminEnquiries = () => {
         }
     };
 
-    const handleBulkAction = async () => {
-        if (!bulkAction || selectedEnquiries.length === 0) return;
-
-        try {
-            let actionData = { action: bulkAction, enquiryIds: selectedEnquiries };
-
-            if (bulkAction === 'updateStatus') {
-                const status = prompt('Enter new status (new, in_progress, resolved, closed):');
-                if (!status) return;
-                actionData.updateData = { status };
-            } else if (bulkAction === 'updatePriority') {
-                const priority = prompt('Enter new priority (low, medium, high, urgent):');
-                if (!priority) return;
-                actionData.updateData = { priority };
-            } else if (bulkAction === 'delete') {
-                const confirmed = await confirm(`Are you sure you want to delete ${selectedEnquiries.length} enquiries?`);
-                if (!confirmed) return;
-            }
-
-            const response = await enquiryApi.bulkAction(actionData);
-            if (response.success) {
-                setSelectedEnquiries([]);
-                setBulkAction('');
-                await fetchEnquiries();
-                await fetchStats();
-            }
-        } catch (err) {
-            setError('Bulk action failed: ' + (err.message || 'Unknown error'));
-        }
-    };
-
-    const handleSelectEnquiry = (enquiryId) => {
-        setSelectedEnquiries(prev =>
-            prev.includes(enquiryId)
-                ? prev.filter(id => id !== enquiryId)
-                : [...prev, enquiryId]
-        );
-    };
-
-    const handleSelectAll = () => {
-        if (selectedEnquiries.length === enquiries.length) {
-            setSelectedEnquiries([]);
-        } else {
-            setSelectedEnquiries(enquiries.map(e => e._id));
-        }
-    };
+    // Removed: bulk action handlers & selection logic
 
     const getStatusBadge = (status) => {
         const statusClasses = {
@@ -293,34 +248,16 @@ const AdminEnquiries = () => {
                         ))}
                     </select>
 
-                    <input
-                        type="text"
-                        placeholder="Search enquiries..."
+                    <SearchBar
                         value={filters.search}
-                        onChange={(e) => handleFilterChange('search', e.target.value)}
+                        onChange={(value) => handleFilterChange('search', value)}
+                        placeholder="Search enquiries..."
+                        onClear={() => handleFilterChange('search', '')}
+                        size="md"
                     />
                 </div>
 
-                {selectedEnquiries.length > 0 && (
-                    <div className="bulk-actions">
-                        <select
-                            value={bulkAction}
-                            onChange={(e) => setBulkAction(e.target.value)}
-                        >
-                            <option value="">Select Action</option>
-                            <option value="updateStatus">Update Status</option>
-                            <option value="updatePriority">Update Priority</option>
-                            <option value="delete">Delete</option>
-                        </select>
-                        <button
-                            onClick={handleBulkAction}
-                            disabled={!bulkAction}
-                            className="bulk-action-btn"
-                        >
-                            Apply to {selectedEnquiries.length} enquiries
-                        </button>
-                    </div>
-                )}
+                {/* Bulk actions removed */}
             </div>
 
             {loading ? (
@@ -334,13 +271,6 @@ const AdminEnquiries = () => {
                         <table>
                             <thead>
                                 <tr>
-                                    <th>
-                                        <input
-                                            type="checkbox"
-                                            checked={selectedEnquiries.length === enquiries.length}
-                                            onChange={handleSelectAll}
-                                        />
-                                    </th>
                                     <th>Customer</th>
                                     <th>Subject</th>
                                     <th>Category</th>
@@ -353,13 +283,6 @@ const AdminEnquiries = () => {
                             <tbody>
                                 {enquiries.map(enquiry => (
                                     <tr key={enquiry._id}>
-                                        <td>
-                                            <input
-                                                type="checkbox"
-                                                checked={selectedEnquiries.includes(enquiry._id)}
-                                                onChange={() => handleSelectEnquiry(enquiry._id)}
-                                            />
-                                        </td>
                                         <td>
                                             <div className="customer-info">
                                                 <strong>{enquiry.name}</strong>
@@ -374,58 +297,48 @@ const AdminEnquiries = () => {
                                             <span className="category-badge">{enquiry.category}</span>
                                         </td>
                                         <td>
-                                            <select
-                                                value={enquiry.status}
-                                                onChange={(e) => handleStatusUpdate(enquiry._id, e.target.value)}
-                                                className="status-select"
-                                            >
-                                                <option value="new">New</option>
-                                                <option value="in_progress">In Progress</option>
-                                                <option value="resolved">Resolved</option>
-                                                <option value="closed">Closed</option>
-                                            </select>
+                                            {getStatusBadge(enquiry.status)}
                                         </td>
                                         <td>
-                                            <select
-                                                value={enquiry.priority}
-                                                onChange={(e) => handlePriorityUpdate(enquiry._id, e.target.value)}
-                                                className="priority-select"
-                                            >
-                                                <option value="low">Low</option>
-                                                <option value="medium">Medium</option>
-                                                <option value="high">High</option>
-                                                <option value="urgent">Urgent</option>
-                                            </select>
+                                            {getPriorityBadge(enquiry.priority)}
                                         </td>
                                         <td>{formatDate(enquiry.createdAt)}</td>
                                         <td className="actions-cell">
-                                            <button
-                                                onClick={() => {
-                                                    setSelectedEnquiry(enquiry);
-                                                    setShowDetailsModal(true);
-                                                }}
-                                                className="action-btn view-btn"
-                                                title="View Details"
-                                            >
-                                                👁️
-                                            </button>
-                                            <button
-                                                onClick={() => {
-                                                    setSelectedEnquiry(enquiry);
-                                                    setShowResponseModal(true);
-                                                }}
-                                                className="action-btn respond-btn"
-                                                title="Send Response"
-                                            >
-                                                📧
-                                            </button>
-                                            <button
-                                                onClick={() => handleDeleteEnquiry(enquiry._id)}
-                                                className="action-btn delete-btn"
-                                                title="Delete"
-                                            >
-                                                🗑️
-                                            </button>
+                                            <div className="action-btn-group">
+                                                <button
+                                                    onClick={() => {
+                                                        setSelectedEnquiry(enquiry);
+                                                        setShowDetailsModal(true);
+                                                    }}
+                                                    className="action-btn2 action-view"
+                                                    aria-label="View details"
+                                                    data-tooltip="View details"
+                                                    type="button"
+                                                >
+                                                    <ICONS.VIEW />
+                                                </button>
+                                                <button
+                                                    onClick={() => {
+                                                        setSelectedEnquiry(enquiry);
+                                                        setShowResponseModal(true);
+                                                    }}
+                                                    className="action-btn2 action-respond"
+                                                    aria-label="Send response"
+                                                    data-tooltip="Send response"
+                                                    type="button"
+                                                >
+                                                    <ICONS.EMAIL />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDeleteEnquiry(enquiry._id)}
+                                                    className="action-btn2 action-delete"
+                                                    aria-label="Delete enquiry"
+                                                    data-tooltip="Delete enquiry"
+                                                    type="button"
+                                                >
+                                                    <ICONS.DELETE />
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}

@@ -3,8 +3,9 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useToast } from '../context/ToastContext';
 import { eventApi } from '../api/eventApi';
 import { getTemplates } from '../api/certificateTemplateApi';
+import ICONS from '../constants/icons';
 import {
-    FaSave, FaArrowLeft, FaCalendarAlt, FaImage, FaPlus, FaTrash,
+    FaCalendarAlt, FaImage,
     FaInfoCircle, FaTicketAlt, FaMapMarkerAlt, FaCertificate,
     FaClock, FaTag
 } from 'react-icons/fa';
@@ -45,6 +46,10 @@ export default function EventForm() {
     const [tagInput, setTagInput] = useState('');
     const [bannerFile, setBannerFile] = useState(null);
     const [imageFiles, setImageFiles] = useState([]);
+    const [validationErrors, setValidationErrors] = useState({});
+    const [serverDetails, setServerDetails] = useState(null);
+
+    const MIN_PAID_PRICE = 1; // backend requires at least 1 rupee for paid events
 
     useEffect(() => {
         async function fetchCertTemplates() {
@@ -169,24 +174,102 @@ export default function EventForm() {
         handleUpdateQuestion(questionIndex, 'options', newOptions);
     };
 
+    const validateForm = () => {
+        const errors = {};
+        const requiredText = (v, field) => { if (!v || !String(v).trim()) errors[field] = 'This field is required.'; };
+
+        requiredText(formData.title, 'title');
+        requiredText(formData.description, 'description');
+        requiredText(formData.category, 'category');
+        if (!formData.maxParticipants || formData.maxParticipants < 1) errors.maxParticipants = 'Max participants must be at least 1.';
+
+        // Dates
+        if (!formData.startDate) errors.startDate = 'Start date required';
+        if (!formData.endDate) errors.endDate = 'End date required';
+        if (!formData.registrationStartDate) errors.registrationStartDate = 'Registration start date required';
+        if (!formData.registrationEndDate) errors.registrationEndDate = 'Registration end date required';
+        if (formData.startDate && formData.endDate) {
+            if (new Date(formData.startDate) >= new Date(formData.endDate)) errors.endDate = 'End must be after start.';
+        }
+        if (formData.registrationStartDate && formData.registrationEndDate) {
+            if (new Date(formData.registrationStartDate) >= new Date(formData.registrationEndDate)) errors.registrationEndDate = 'Registration end must be after registration start.';
+        }
+        if (formData.registrationEndDate && formData.startDate) {
+            if (new Date(formData.registrationEndDate) > new Date(formData.startDate)) errors.registrationEndDate = 'Registration must end before event starts.';
+        }
+
+        // Paid event price
+        if (formData.eventType === 'paid') {
+            if (formData.price == null || isNaN(formData.price)) errors.price = 'Price is required.';
+            else if (Number(formData.price) < MIN_PAID_PRICE) errors.price = 'Price must be at least ₹1.';
+        }
+
+        // Mode-specific fields
+        if (formData.eventMode === 'online') {
+            if (!formData.eventLink) errors.eventLink = 'Event link required for online events.';
+        }
+        if (formData.eventMode === 'offline') {
+            if (!formData.venue) errors.venue = 'Venue required for offline events.';
+            if (!formData.address) errors.address = 'Address required for offline events.';
+        }
+        if (formData.eventMode === 'hybrid') {
+            if (!formData.eventLink) errors.eventLink = 'Event link required for hybrid events.';
+            if (!formData.venue) errors.venue = 'Venue required for hybrid events.';
+            if (!formData.address) errors.address = 'Address required for hybrid events.';
+        }
+
+        // Certificate template
+        if (formData.hasCertificate && !formData.certificateTemplateId) errors.certificateTemplateId = 'Select a certificate template.';
+
+        // Questions validation for required empties
+        formData.registrationQuestions.forEach((q, idx) => {
+            if (!q.question?.trim()) {
+                errors[`question_${idx}`] = 'Question text required.';
+            }
+            if (q.type === 'select') {
+                if (!q.options || q.options.length < 2) errors[`question_${idx}`] = 'Provide at least 2 options.';
+                else if (q.options.some(opt => !opt.trim())) errors[`question_${idx}`] = 'Empty options not allowed.';
+            }
+        });
+
+        // Tags limit (prevent extreme list)
+        if (formData.tags.length > 15) errors.tags = 'Maximum 15 tags allowed.';
+
+        // Images validation (client side)
+        if (imageFiles.length > 5) errors.images = 'Maximum 5 additional images.';
+        const largeImage = [...imageFiles, bannerFile].filter(Boolean).find(f => f.size > 5 * 1024 * 1024);
+        if (largeImage) errors.images = 'Images must be under 5MB.';
+
+        setValidationErrors(errors);
+        return { valid: Object.keys(errors).length === 0, errors };
+    };
+
+    const mapServerError = (err) => {
+        if (!err) return 'Failed to save event.';
+        const msg = err.response?.data?.message || err.message || 'Failed to save event.';
+        // Basic heuristics
+        if (/price/i.test(msg) && /least/i.test(msg)) return 'Server rejected price: must be at least ₹1.';
+        if (/date/i.test(msg) && /registration/i.test(msg)) return 'Server date validation failed (check registration and event dates).';
+        if (/certificate/i.test(msg)) return 'Certificate configuration invalid. Ensure a template is selected.';
+        return msg;
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
         setError(null);
+        setServerDetails(null);
+
+        const { valid } = validateForm();
+        if (!valid) {
+            setLoading(false);
+            toast.error('Please fix the highlighted errors.');
+            return;
+        }
 
         try {
-            // Validate dates
-            const now = new Date();
-            const startDate = new Date(formData.startDate);
-            const endDate = new Date(formData.endDate);
-            const regStart = new Date(formData.registrationStartDate);
-            const regEnd = new Date(formData.registrationEndDate);
-
-            if (startDate <= endDate && regStart <= regEnd && regEnd <= startDate) {
-                // Dates are valid
-            } else {
-                throw new Error('Please check your dates. Registration should end before event starts, and event end should be after start.');
-            }
+            // Re-check dates just in case server uses timezone differently
+            if (validationErrors.endDate || validationErrors.registrationEndDate) throw new Error('Fix date errors before submitting.');
 
             let eventData;
             const payload = {
@@ -221,7 +304,9 @@ export default function EventForm() {
             toast.success(isEdit ? 'Event updated successfully!' : 'Event created successfully!');
             navigate('/admin/events');
         } catch (error) {
-            setError(error.message || error.response?.data?.message || 'Failed to save event');
+            const friendly = mapServerError(error);
+            setError(friendly);
+            if (error?.response?.data) setServerDetails(error.response.data);
         } finally {
             setLoading(false);
         }
@@ -258,7 +343,13 @@ export default function EventForm() {
 
             {error && (
                 <div className="alert alert-danger" role="alert">
-                    {error}
+                    <strong>Error:</strong> {error}
+                    {serverDetails?.code && <div className="small mt-1 text-muted">Code: {serverDetails.code}</div>}
+                </div>
+            )}
+            {Object.keys(validationErrors).length > 0 && !error && (
+                <div className="alert alert-warning py-2" role="alert">
+                    Please resolve the highlighted {Object.keys(validationErrors).length} field{Object.keys(validationErrors).length > 1 ? 's' : ''}.
                 </div>
             )}
 
@@ -280,12 +371,13 @@ export default function EventForm() {
                                         <label className="form-label fw-bold">Event Title *</label>
                                         <input
                                             type="text"
-                                            className="form-control"
+                                            className={`form-control ${validationErrors.title ? 'is-invalid' : ''}`}
                                             value={formData.title}
                                             onChange={(e) => handleInputChange('title', e.target.value)}
                                             required
                                             placeholder="Enter event title..."
                                         />
+                                        {validationErrors.title && <div className="invalid-feedback d-block">{validationErrors.title}</div>}
                                     </div>
                                     <div className="col-12 mb-3">
                                         <label className="form-label fw-bold">Short Description</label>
@@ -301,18 +393,19 @@ export default function EventForm() {
                                     <div className="col-12 mb-3">
                                         <label className="form-label fw-bold">Description *</label>
                                         <textarea
-                                            className="form-control"
+                                            className={`form-control ${validationErrors.description ? 'is-invalid' : ''}`}
                                             rows="6"
                                             value={formData.description}
                                             onChange={(e) => handleInputChange('description', e.target.value)}
                                             required
                                             placeholder="Detailed description of your event..."
                                         />
+                                        {validationErrors.description && <div className="invalid-feedback d-block">{validationErrors.description}</div>}
                                     </div>
                                     <div className="col-md-6 mb-3">
                                         <label className="form-label fw-bold">Category *</label>
                                         <select
-                                            className="form-select"
+                                            className={`form-select ${validationErrors.category ? 'is-invalid' : ''}`}
                                             value={formData.category}
                                             onChange={(e) => handleInputChange('category', e.target.value)}
                                             required
@@ -321,17 +414,19 @@ export default function EventForm() {
                                                 <option key={cat} value={cat}>{cat}</option>
                                             ))}
                                         </select>
+                                        {validationErrors.category && <div className="invalid-feedback d-block">{validationErrors.category}</div>}
                                     </div>
                                     <div className="col-md-6 mb-3">
                                         <label className="form-label fw-bold">Max Participants *</label>
                                         <input
                                             type="number"
-                                            className="form-control"
+                                            className={`form-control ${validationErrors.maxParticipants ? 'is-invalid' : ''}`}
                                             value={formData.maxParticipants}
                                             onChange={(e) => handleInputChange('maxParticipants', parseInt(e.target.value))}
                                             required
                                             min="1"
                                         />
+                                        {validationErrors.maxParticipants && <div className="invalid-feedback d-block">{validationErrors.maxParticipants}</div>}
                                     </div>
                                 </div>
                             </div>
@@ -364,13 +459,14 @@ export default function EventForm() {
                                             <label className="form-label fw-bold">Price (INR) *</label>
                                             <input
                                                 type="number"
-                                                className="form-control"
+                                                className={`form-control ${validationErrors.price ? 'is-invalid' : ''}`}
                                                 value={formData.price}
                                                 onChange={(e) => handleInputChange('price', parseFloat(e.target.value))}
                                                 required
                                                 min="0"
                                                 step="0.01"
                                             />
+                                            {validationErrors.price && <div className="invalid-feedback d-block">{validationErrors.price}</div>}
                                         </div>
                                     )}
                                     <div className="col-md-6 mb-3">
@@ -405,11 +501,12 @@ export default function EventForm() {
                                         <label className="form-label fw-bold">Event Link</label>
                                         <input
                                             type="url"
-                                            className="form-control"
+                                            className={`form-control ${validationErrors.eventLink ? 'is-invalid' : ''}`}
                                             value={formData.eventLink}
                                             onChange={(e) => handleInputChange('eventLink', e.target.value)}
                                             placeholder="https://zoom.us/j/123456789"
                                         />
+                                        {validationErrors.eventLink && <div className="invalid-feedback d-block">{validationErrors.eventLink}</div>}
                                     </div>
                                 )}
 
@@ -419,21 +516,23 @@ export default function EventForm() {
                                             <label className="form-label fw-bold">Venue</label>
                                             <input
                                                 type="text"
-                                                className="form-control"
+                                                className={`form-control ${validationErrors.venue ? 'is-invalid' : ''}`}
                                                 value={formData.venue}
                                                 onChange={(e) => handleInputChange('venue', e.target.value)}
                                                 placeholder="Event venue name"
                                             />
+                                            {validationErrors.venue && <div className="invalid-feedback d-block">{validationErrors.venue}</div>}
                                         </div>
                                         <div className="mb-3">
                                             <label className="form-label fw-bold">Address</label>
                                             <textarea
-                                                className="form-control"
+                                                className={`form-control ${validationErrors.address ? 'is-invalid' : ''}`}
                                                 rows="2"
                                                 value={formData.address}
                                                 onChange={(e) => handleInputChange('address', e.target.value)}
                                                 placeholder="Full address of the venue"
                                             />
+                                            {validationErrors.address && <div className="invalid-feedback d-block">{validationErrors.address}</div>}
                                         </div>
                                     </>
                                 )}
@@ -455,7 +554,7 @@ export default function EventForm() {
                                     <div className="mb-3">
                                         <label className="form-label fw-bold">Certificate Template *</label>
                                         <select
-                                            className="form-select"
+                                            className={`form-select ${validationErrors.certificateTemplateId ? 'is-invalid' : ''}`}
                                             value={formData.certificateTemplateId}
                                             onChange={e => handleInputChange('certificateTemplateId', e.target.value)}
                                             required
@@ -465,6 +564,7 @@ export default function EventForm() {
                                                 <option key={tpl._id} value={tpl._id}>{tpl.name}</option>
                                             ))}
                                         </select>
+                                        {validationErrors.certificateTemplateId && <div className="invalid-feedback d-block">{validationErrors.certificateTemplateId}</div>}
                                     </div>
                                 )}
                             </div>
@@ -484,41 +584,45 @@ export default function EventForm() {
                                         <label className="form-label fw-bold">Event Start *</label>
                                         <input
                                             type="datetime-local"
-                                            className="form-control"
+                                            className={`form-control ${validationErrors.startDate ? 'is-invalid' : ''}`}
                                             value={formData.startDate}
                                             onChange={(e) => handleInputChange('startDate', e.target.value)}
                                             required
                                         />
+                                        {validationErrors.startDate && <div className="invalid-feedback d-block">{validationErrors.startDate}</div>}
                                     </div>
                                     <div className="col-md-6 mb-3">
                                         <label className="form-label fw-bold">Event End *</label>
                                         <input
                                             type="datetime-local"
-                                            className="form-control"
+                                            className={`form-control ${validationErrors.endDate ? 'is-invalid' : ''}`}
                                             value={formData.endDate}
                                             onChange={(e) => handleInputChange('endDate', e.target.value)}
                                             required
                                         />
+                                        {validationErrors.endDate && <div className="invalid-feedback d-block">{validationErrors.endDate}</div>}
                                     </div>
                                     <div className="col-md-6 mb-3">
                                         <label className="form-label fw-bold">Registration Start *</label>
                                         <input
                                             type="datetime-local"
-                                            className="form-control"
+                                            className={`form-control ${validationErrors.registrationStartDate ? 'is-invalid' : ''}`}
                                             value={formData.registrationStartDate}
                                             onChange={(e) => handleInputChange('registrationStartDate', e.target.value)}
                                             required
                                         />
+                                        {validationErrors.registrationStartDate && <div className="invalid-feedback d-block">{validationErrors.registrationStartDate}</div>}
                                     </div>
                                     <div className="col-md-6 mb-3">
                                         <label className="form-label fw-bold">Registration End *</label>
                                         <input
                                             type="datetime-local"
-                                            className="form-control"
+                                            className={`form-control ${validationErrors.registrationEndDate ? 'is-invalid' : ''}`}
                                             value={formData.registrationEndDate}
                                             onChange={(e) => handleInputChange('registrationEndDate', e.target.value)}
                                             required
                                         />
+                                        {validationErrors.registrationEndDate && <div className="invalid-feedback d-block">{validationErrors.registrationEndDate}</div>}
                                     </div>
                                 </div>
                             </div>
@@ -547,7 +651,7 @@ export default function EventForm() {
                                         className="btn btn-outline-primary"
                                         onClick={handleAddTag}
                                     >
-                                        <FaPlus />
+                                        <ICONS.ADD />
                                     </button>
                                 </div>
                                 <div className="d-flex flex-wrap gap-2">
@@ -563,6 +667,7 @@ export default function EventForm() {
                                         </span>
                                     ))}
                                 </div>
+                                {validationErrors.tags && <div className="text-danger small mt-2">{validationErrors.tags}</div>}
                             </div>
                         </div>
 
@@ -575,7 +680,7 @@ export default function EventForm() {
                                     className="btn btn-outline-primary btn-sm"
                                     onClick={handleAddQuestion}
                                 >
-                                    <FaPlus className="me-1" />
+                                    <ICONS.ADD className="me-1" />
                                     Add Question
                                 </button>
                             </div>
@@ -586,7 +691,7 @@ export default function EventForm() {
                                     </p>
                                 ) : (
                                     formData.registrationQuestions.map((question, qIndex) => (
-                                        <div key={question._id} className="border rounded p-3 mb-3">
+                                        <div key={question._id} className={`border rounded p-3 mb-3 ${validationErrors[`question_${qIndex}`] ? 'border-danger' : ''}`}>
                                             <div className="d-flex justify-content-between align-items-start mb-3">
                                                 <h6 className="fw-bold mb-0">Question {qIndex + 1}</h6>
                                                 <button
@@ -594,7 +699,7 @@ export default function EventForm() {
                                                     className="btn btn-outline-danger btn-sm"
                                                     onClick={() => handleRemoveQuestion(qIndex)}
                                                 >
-                                                    <FaTrash />
+                                                    <ICONS.DELETE />
                                                 </button>
                                             </div>
 
@@ -640,7 +745,7 @@ export default function EventForm() {
                                                                 className="btn btn-outline-danger"
                                                                 onClick={() => handleRemoveOption(qIndex, oIndex)}
                                                             >
-                                                                <FaTrash />
+                                                                <ICONS.DELETE />
                                                             </button>
                                                         </div>
                                                     ))}
@@ -649,7 +754,7 @@ export default function EventForm() {
                                                         className="btn btn-outline-secondary btn-sm"
                                                         onClick={() => handleAddOption(qIndex)}
                                                     >
-                                                        <FaPlus className="me-1" />
+                                                        <ICONS.ADD className="me-1" />
                                                         Add Option
                                                     </button>
                                                 </div>
@@ -667,6 +772,7 @@ export default function EventForm() {
                                                     Required question
                                                 </label>
                                             </div>
+                                            {validationErrors[`question_${qIndex}`] && <div className="text-danger small mt-2">{validationErrors[`question_${qIndex}`]}</div>}
                                         </div>
                                     ))
                                 )}
@@ -689,7 +795,7 @@ export default function EventForm() {
                                     <label className="form-label fw-bold">Event Banner</label>
                                     <input
                                         type="file"
-                                        className="form-control"
+                                        className={`form-control ${validationErrors.images ? 'is-invalid' : ''}`}
                                         accept="image/*"
                                         onChange={(e) => setBannerFile(e.target.files[0])}
                                     />
@@ -699,12 +805,13 @@ export default function EventForm() {
                                     <label className="form-label fw-bold">Additional Images</label>
                                     <input
                                         type="file"
-                                        className="form-control"
+                                        className={`form-control ${validationErrors.images ? 'is-invalid' : ''}`}
                                         accept="image/*"
                                         multiple
                                         onChange={(e) => setImageFiles(Array.from(e.target.files))}
                                     />
                                     <small className="text-muted">Max 5 images, 5MB each</small>
+                                    {validationErrors.images && <div className="invalid-feedback d-block">{validationErrors.images}</div>}
                                 </div>
                             </div>
                         </div>
@@ -725,7 +832,7 @@ export default function EventForm() {
                                             </>
                                         ) : (
                                             <>
-                                                <FaSave className="me-2" />
+                                                <ICONS.SAVE className="me-2" />
                                                 {isEdit ? 'Update Event' : 'Create Event'}
                                             </>
                                         )}

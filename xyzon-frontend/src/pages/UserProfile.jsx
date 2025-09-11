@@ -2,10 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { profileApi } from '../api/profileApi';
+import ICONS, { ICON_SIZES, ICON_COLORS } from '../constants/icons';
 import {
     FaUser, FaEnvelope, FaPhone, FaCalendarAlt, FaGraduationCap,
-    FaMapMarkerAlt, FaEdit, FaSave, FaTimes, FaCamera, FaTrash,
-    FaLinkedin, FaGithub, FaTwitter, FaGlobe, FaInfoCircle
+    FaMapMarkerAlt, FaLinkedin, FaGithub, FaTwitter, FaGlobe, FaInfoCircle
 } from 'react-icons/fa';
 
 export default function UserProfile() {
@@ -15,7 +15,6 @@ export default function UserProfile() {
     const [loading, setLoading] = useState(true);
     const [editing, setEditing] = useState(false);
     const [saving, setSaving] = useState(false);
-    const [uploadingPicture, setUploadingPicture] = useState(false);
     const [formData, setFormData] = useState({
         name: '',
         phone: '',
@@ -111,39 +110,7 @@ export default function UserProfile() {
         }
     };
 
-    const handleProfilePictureUpload = async (file) => {
-        if (!file) return;
-
-        if (file.size > 5 * 1024 * 1024) {
-            toast.error('File size should be less than 5MB');
-            return;
-        }
-
-        setUploadingPicture(true);
-        try {
-            const response = await profileApi.uploadProfilePicture(file);
-            const updatedProfile = { ...profile, profilePicture: response.data.data.profilePicture };
-            setProfile(updatedProfile);
-            updateUserData(updatedProfile);
-            toast.success('Profile picture updated successfully');
-        } catch (error) {
-            toast.error(error.response?.data?.message || 'Failed to upload profile picture');
-        } finally {
-            setUploadingPicture(false);
-        }
-    };
-
-    const handleDeleteProfilePicture = async () => {
-        try {
-            await profileApi.deleteProfilePicture();
-            const updatedProfile = { ...profile, profilePicture: null };
-            setProfile(updatedProfile);
-            updateUserData(updatedProfile);
-            toast.success('Profile picture deleted successfully');
-        } catch (error) {
-            toast.error('Failed to delete profile picture');
-        }
-    };
+    // Removed profile picture management as per requirement.
 
     const formatDate = (date) => {
         if (!date) return 'Not set';
@@ -170,88 +137,62 @@ export default function UserProfile() {
         <div className="container py-4">
             <div className="row">
                 <div className="col-lg-4 mb-4">
-                    {/* Profile Picture Card */}
-                    <div className="card shadow-sm">
-                        <div className="card-body text-center">
-                            <div className="position-relative d-inline-block mb-3">
-                                {profile?.profilePicture ? (
-                                    <img
-                                        src={`${import.meta.env.VITE_API_URL}${profile.profilePicture}`}
-                                        alt="Profile"
-                                        className="rounded-circle"
-                                        style={{ width: '150px', height: '150px', objectFit: 'cover' }}
-                                    />
-                                ) : (
-                                    <div
-                                        className="rounded-circle bg-primary d-flex align-items-center justify-content-center text-white"
-                                        style={{ width: '150px', height: '150px' }}
-                                    >
-                                        <FaUser size={60} />
-                                    </div>
-                                )}
-                                <div className="position-absolute bottom-0 end-0">
-                                    <label className="btn btn-primary btn-sm rounded-circle">
-                                        <FaCamera />
-                                        <input
-                                            type="file"
-                                            accept="image/*"
-                                            className="d-none"
-                                            onChange={(e) => handleProfilePictureUpload(e.target.files[0])}
-                                            disabled={uploadingPicture}
-                                        />
-                                    </label>
-                                </div>
-                            </div>
-
-                            {uploadingPicture && (
-                                <div className="mb-2">
-                                    <div className="spinner-border spinner-border-sm text-primary" />
-                                    <small className="d-block text-muted">Uploading...</small>
-                                </div>
-                            )}
-
-                            <h5 className="card-title">{profile?.name}</h5>
-                            <p className="text-muted">{profile?.email}</p>
-
-                            {profile?.profilePicture && (
-                                <button
-                                    className="btn btn-outline-danger btn-sm"
-                                    onClick={handleDeleteProfilePicture}
-                                >
-                                    <FaTrash className="me-1" />
-                                    Remove Picture
-                                </button>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Quick Info Card */}
-                    <div className="card shadow-sm mt-4">
-                        <div className="card-header">
+                    {/* Account Overview (profile picture removed) */}
+                    <div className="card shadow-sm h-100">
+                        <div className="card-header border-0 pb-0">
                             <h6 className="card-title mb-0">
-                                <FaInfoCircle className="me-2" />
-                                Quick Info
+                                <FaInfoCircle className="me-2" />Account Overview
                             </h6>
                         </div>
-                        <div className="card-body">
-                            <div className="d-flex align-items-center mb-2">
-                                <FaGraduationCap className="text-primary me-2" />
-                                <small>{profile?.collegeName || 'College not set'}</small>
+                        <div className="card-body pt-3">
+                            <div className="mb-3">
+                                <div className="small text-muted">Name</div>
+                                <div className="fw-semibold">{profile?.name || '—'}</div>
                             </div>
-                            <div className="d-flex align-items-center mb-2">
-                                <FaPhone className="text-success me-2" />
-                                <small>{profile?.phone || 'Phone not set'}</small>
+                            <div className="mb-3">
+                                <div className="small text-muted">Email</div>
+                                <div className="fw-semibold d-flex align-items-center gap-2"><FaEnvelope /> {profile?.email}</div>
                             </div>
-                            <div className="d-flex align-items-center mb-2">
-                                <FaCalendarAlt className="text-info me-2" />
-                                <small>{formatDate(profile?.dateOfBirth)}</small>
+                            <div className="mb-3">
+                                <div className="small text-muted">College</div>
+                                <div className="fw-semibold d-flex align-items-center gap-2"><FaGraduationCap /> {profile?.collegeName || 'Not set'}</div>
                             </div>
-                            {profile?.address?.city && (
-                                <div className="d-flex align-items-center">
-                                    <FaMapMarkerAlt className="text-warning me-2" />
-                                    <small>{profile.address.city}, {profile.address.state}</small>
+                            <div className="mb-3">
+                                <div className="small text-muted">Phone</div>
+                                <div className="fw-semibold d-flex align-items-center gap-2"><FaPhone /> {profile?.phone || 'Not set'}</div>
+                            </div>
+                            <div className="mb-3">
+                                <div className="small text-muted">Date of Birth</div>
+                                <div className="fw-semibold d-flex align-items-center gap-2"><FaCalendarAlt /> {formatDate(profile?.dateOfBirth)}</div>
+                            </div>
+                            <div className="mb-3">
+                                <div className="small text-muted">Location</div>
+                                <div className="fw-semibold d-flex align-items-center gap-2">
+                                    <FaMapMarkerAlt />
+                                    {profile?.address?.city || profile?.address?.state ? (
+                                        <>{[profile.address.city, profile.address.state].filter(Boolean).join(', ')}</>
+                                    ) : 'Not set'}
                                 </div>
-                            )}
+                            </div>
+                            <div className="mb-4">
+                                <div className="small text-muted">Department / Year</div>
+                                <div className="fw-semibold">{profile?.department && profile?.yearOfStudy ? `${profile.department} - ${profile.yearOfStudy}` : 'Not set'}</div>
+                            </div>
+                            {/* Completeness */}
+                            {(() => {
+                                const fields = [profile?.phone, profile?.collegeName, profile?.department, profile?.yearOfStudy, profile?.address?.city, profile?.bio, profile?.socialLinks?.linkedin, profile?.socialLinks?.github];
+                                const filled = fields.filter(Boolean).length;
+                                const percent = Math.round((filled / fields.length) * 100);
+                                return (
+                                    <div className="mt-auto">
+                                        <div className="small text-muted mb-1">Profile completeness</div>
+                                        <div className="progress" style={{ height: '6px' }}>
+                                            <div className="progress-bar bg-primary" role="progressbar" style={{ width: `${percent}%` }} aria-valuenow={percent} aria-valuemin="0" aria-valuemax="100" />
+                                        </div>
+                                        <div className="small mt-1 fw-semibold">{percent}% complete</div>
+                                    </div>
+                                );
+                            })()}
                         </div>
                     </div>
                 </div>
@@ -270,12 +211,12 @@ export default function UserProfile() {
                             >
                                 {editing ? (
                                     <>
-                                        <FaTimes className="me-1" />
+                                        <ICONS.CANCEL className="me-1" size={ICON_SIZES.SM} />
                                         Cancel
                                     </>
                                 ) : (
                                     <>
-                                        <FaEdit className="me-1" />
+                                        <ICONS.EDIT className="me-1" size={ICON_SIZES.SM} />
                                         Edit Profile
                                     </>
                                 )}
@@ -491,7 +432,7 @@ export default function UserProfile() {
                                                 </>
                                             ) : (
                                                 <>
-                                                    <FaSave className="me-1" />
+                                                    <ICONS.SAVE className="me-1" size={ICON_SIZES.SM} />
                                                     Save Changes
                                                 </>
                                             )}

@@ -35,9 +35,18 @@ const handleSectionClick = (sectionId, navigate) => {
     }
 };
 
-// Helper function to handle home navigation
+// Helper function to handle home navigation (ensures scroll-to-top both when staying on and navigating to '/')
 const handleHomeClick = (navigate) => {
-    navigate('/', { replace: false });
+    if (window.location.pathname !== '/') {
+        navigate('/', { replace: false });
+        // Allow React Router to render home before scrolling
+        setTimeout(() => {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }, 50);
+    } else {
+        // Already on home – just scroll to top
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
 };
 
 export function Header() {
@@ -47,7 +56,9 @@ export function Header() {
     const { items } = useMenu();
     const navigate = useNavigate();
     const [open, setOpen] = useState(false);
-    const hasCustom = items && items.length > 0 && (location.pathname.startsWith('/admin') || location.pathname.startsWith('/user'));
+    // Show custom (admin/user) hamburger + side menu for any admin or user route,
+    // even before items load to avoid flicker / absence on first paint.
+    const hasCustom = (location.pathname.startsWith('/admin') || location.pathname.startsWith('/user'));
     const toggle = () => setOpen(o => !o);
     const close = () => setOpen(false);
     return (
@@ -56,8 +67,25 @@ export function Header() {
                 <div className="container-fluid px-3">
                     <div className="d-flex align-items-center gap-2">
                         {hasCustom && (
-                            <button onClick={toggle} className="btn btn-outline-primary d-inline-flex" aria-label="Toggle menu" aria-expanded={open} aria-controls="panel-side-menu">
-                                {open ? <FiX /> : <FiMenu />}
+                            <button
+                                onClick={toggle}
+                                aria-label={open ? 'Close menu' : 'Open menu'}
+                                aria-expanded={open}
+                                aria-controls="panel-side-menu"
+                                className="d-inline-flex menu-icon-btn"
+                                style={{
+                                    width: 40,
+                                    height: 40,
+                                    padding: 0,
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    borderRadius: 10,
+                                    border: '1px solid #00006633',
+                                    background: '#ffffff',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                {open ? <FiX size={20} /> : <FiMenu size={20} />}
                             </button>
                         )}
                         <Link className="navbar-brand d-flex align-items-center gap-2" to="/" style={{ fontWeight: 700, letterSpacing: 0.5, color: '#000066', textDecoration: 'none' }}>
@@ -120,11 +148,7 @@ export function Header() {
                                     <Link to="/register" className="btn btn-primary fw-semibold px-3 py-2">Sign Up</Link>
                                 </>
                             )}
-                            {user && hasCustom && (
-                                <div className="d-flex align-items-center px-3 py-2 fw-semibold" style={{ background: '#00006610', borderRadius: 30, fontSize: 14, color: '#000066' }}>
-                                    <FiUser style={{ marginRight: 6 }} /> {user.role === 'admin' ? 'Admin' : 'User'}
-                                </div>
-                            )}
+                            {/* Removed user/admin display from header for custom routes */}
                             {user && !hasCustom && (
                                 <>
                                     <div className="d-none d-md-flex align-items-center px-3 py-2 fw-semibold" style={{ background: '#00006610', borderRadius: 30, fontSize: 14, color: '#000066' }}>
@@ -139,6 +163,13 @@ export function Header() {
             </nav>
             {hasCustom && (
                 <div id="panel-side-menu" style={{ position: 'fixed', top: 64, left: 0, bottom: 0, width: 240, background: '#fff', borderRight: '1px solid #00006622', transform: open ? 'translateX(0)' : 'translateX(-110%)', transition: 'transform .35s', boxShadow: '2px 0 8px rgba(0,0,0,0.08)', zIndex: 1190 }}>
+                    {user && (
+                        <div style={{ padding: '1rem .75rem 0 .75rem', marginBottom: 8 }}>
+                            <div className="d-flex align-items-center px-3 py-2 fw-semibold" style={{ background: '#00006610', borderRadius: 30, fontSize: 15, color: '#000066', justifyContent: 'center' }}>
+                                <FiUser style={{ marginRight: 6 }} /> {user.role === 'admin' ? 'Admin' : 'User'}
+                            </div>
+                        </div>
+                    )}
                     <ul style={{ listStyle: 'none', margin: 0, padding: '1rem .75rem', display: 'flex', flexDirection: 'column', gap: 4 }}>
                         {items.map((it, index) => (
                             <li key={it.to || index}>

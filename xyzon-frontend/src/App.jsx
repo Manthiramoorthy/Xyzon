@@ -528,7 +528,22 @@ export default function App() {
                 ))}
               </ul>
               <div className="learning-footer">
-                <a href="#contact" className="learning-cta">Learn More →</a>
+                <a
+                  href="#contact"
+                  className="learning-cta"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    const target = document.getElementById('contact');
+                    if (target) {
+                      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    } else {
+                      window.location.hash = 'contact';
+                    }
+                  }}
+                  style={{ position: 'relative', zIndex: 2 }}
+                >
+                  Learn More →
+                </a>
               </div>
             </div>
           ))}

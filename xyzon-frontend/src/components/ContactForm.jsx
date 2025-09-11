@@ -128,15 +128,16 @@ const ContactForm = () => {
 
                 <div className="form-row">
                     <div className="form-group">
-                        <label htmlFor="phone">Phone Number</label>
+                        <label htmlFor="phone">Phone Number *</label>
                         <input
                             type="tel"
                             id="phone"
                             name="phone"
                             value={formData.phone}
                             onChange={handleInputChange}
-                            placeholder="+1 (555) 123-4567"
+                            placeholder="Enter your phone number"
                             disabled={loading}
+                            required
                         />
                     </div>
 

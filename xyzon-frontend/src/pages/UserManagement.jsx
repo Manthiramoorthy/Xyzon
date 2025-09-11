@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { authApiService } from '../api/authApi';
 import { useToast } from '../context/ToastContext';
-import {
-    FaUsers, FaSearch, FaFilter, FaUserShield, FaUserSlash,
-    FaTrash, FaEdit, FaEye, FaBan, FaCheck
-} from 'react-icons/fa';
+import SearchBar from '../components/SearchBar';
+import ICONS, { ICON_SIZES, ICON_COLORS } from '../constants/icons';
+import { FaUsers, FaUserShield, FaUserSlash, FaBan } from 'react-icons/fa';
 
 const UserCard = ({ user, onUpdateRole, onSuspend, onDelete }) => {
     const getRoleBadge = (role) => {
@@ -67,14 +66,14 @@ const UserCard = ({ user, onUpdateRole, onSuspend, onDelete }) => {
                         onClick={() => onSuspend(user)}
                         title={user.isActive ? 'Suspend User' : 'Unsuspend User'}
                     >
-                        {user.isActive ? <FaBan /> : <FaCheck />}
+                        {user.isActive ? <FaBan /> : <ICONS.CONFIRM size={ICON_SIZES.SM} />}
                     </button>
                     <button
                         className="btn btn-outline-danger btn-sm"
                         onClick={() => onDelete(user)}
                         title="Delete User"
                     >
-                        <FaTrash />
+                        <ICONS.DELETE size={ICON_SIZES.SM} />
                     </button>
                 </div>
             </div>
@@ -265,18 +264,12 @@ export default function UserManagement() {
                         <div className="card-body">
                             <div className="row align-items-center">
                                 <div className="col-md-6">
-                                    <div className="input-group">
-                                        <span className="input-group-text">
-                                            <FaSearch />
-                                        </span>
-                                        <input
-                                            type="text"
-                                            className="form-control"
-                                            placeholder="Search users..."
-                                            value={filters.search}
-                                            onChange={(e) => handleFilterChange('search', e.target.value)}
-                                        />
-                                    </div>
+                                    <SearchBar
+                                        value={filters.search}
+                                        onChange={(value) => handleFilterChange('search', value)}
+                                        placeholder="Search users..."
+                                        onClear={() => handleFilterChange('search', '')}
+                                    />
                                 </div>
                                 <div className="col-md-3">
                                     <select
@@ -310,7 +303,7 @@ export default function UserManagement() {
             {/* Error */}
             {error && (
                 <div className="alert alert-danger" role="alert">
-                    {error}
+                    {typeof error === 'string' ? error : error.message || 'An error occurred'}
                 </div>
             )}
 

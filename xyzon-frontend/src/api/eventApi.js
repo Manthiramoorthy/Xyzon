@@ -74,6 +74,7 @@ export const eventApi = {
     // Event statistics
     getEventStatistics: (id) => api.get(`/events/${id}/statistics`),
     getEventStats: (id) => api.get(`/events/${id}/stats`),
+    getAdminSummary: (params = {}) => api.get('/events/admin/summary', { params }),
 
     // Event reminders
     sendEventReminders: (id) => api.post(`/events/${id}/send-reminders`),
@@ -111,6 +112,7 @@ export const paymentApi = {
     getAllPayments: (params = {}) => api.get('/payments/admin/all-payments', { params }),
     getEventPayments: (eventId, params = {}) => api.get(`/payments/event/${eventId}/payments`, { params }),
     refundPayment: (id, data) => api.post(`/payments/${id}/refund`, data),
+    cancelPayment: (id) => api.post(`/payments/${id}/cancel`),
     createRazorpayOrder: (data) => api.post('/payments/create-order', data),
     getPaymentStatistics: (params = {}) => api.get('/payments/admin/statistics', { params }),
 };
@@ -138,6 +140,7 @@ export const certificateApi = {
     getCertificate: (certificateId) => api.get(`/certificates/${certificateId}`),
     getCertificateByRegistration: (registrationId) => api.get(`/certificates/registration/${registrationId}`),
     revokeCertificate: (id) => api.put(`/certificates/${id}/revoke`),
+    reissueCertificate: (id) => api.put(`/certificates/${id}/reissue`),
     generateCertificatePreview: (data) => api.post('/certificates/preview', data),
 };
 

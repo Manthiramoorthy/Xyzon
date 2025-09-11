@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import './SendPersonalizedMail.css';
 import { sendPersonalizedBulkMail } from '../api/personalizedMailApi';
 import Papa from 'papaparse';
 import { AttachmentInput } from '../components/AttachmentInput';
@@ -97,7 +98,8 @@ export default function SendPersonalizedMail() {
     };
 
     return (
-        <div className="mx-5 justify-content-center" style={{ position: 'relative', marginTop: 96, marginBottom: 76 }}>
+        // Responsive outer spacing: minimal on mobile, larger on wide screens
+        <div className="px-2 px-md-4 px-lg-5 justify-content-center" style={{ position: 'relative', marginTop: 96, marginBottom: 76 }}>
             {sending && (
                 <div style={{
                     position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh',
@@ -116,28 +118,23 @@ export default function SendPersonalizedMail() {
                 </div>
             )}
             {/* Recipients and template input */}
-            <div className="row">
-                <div className="col-lg-4">
-                    <div className="card shadow-sm mb-4">
-                        <div
-                            className="justify-content-between d-flex mx-3"
-                        >
+            <div className="spm-row">
+                <div className="spm-col-lg-4">
+                    <div className="card spm-card shadow-sm mb-4">
+                        <div className="spm-btn-group mx-3">
                             <button
-                                className="btn btn-outline-secondary shadow me-3"
-                                style={{ minWidth: 150, fontWeight: 600, fontSize: 18 }}
+                                className="btn btn-outline-secondary shadow spm-btn"
                                 onClick={() => { setTemplate(''); setRecipients([]); setRecipientsRaw(''); setAttachments([]); }}
                             >
                                 Reset
                             </button>
                             <button
-                                className="btn btn-success shadow"
-                                style={{ minWidth: 150, fontWeight: 600, fontSize: 18 }}
+                                className="btn btn-success shadow spm-btn"
                                 onClick={sendMail}
                                 disabled={sending || !template || !subject || recipients.length === 0}
                             >
                                 Send
                             </button>
-
                         </div>
                         <div className="card-body">
                             <div className="mb-2">
@@ -158,7 +155,7 @@ export default function SendPersonalizedMail() {
                             <div className="mb-2">
                                 <label className="form-label">Attachments</label>
                                 <AttachmentInput onAdd={addAttachment} inputId="personalized-attach-file" />
-                                <div className="mt-2">
+                                <div className="mt-2 spm-attachment-list">
                                     {attachments.map((a, i) => (
                                         <div key={i} className="d-flex align-items-center justify-content-between bg-light p-2 rounded mb-1">
                                             <div>
@@ -174,8 +171,8 @@ export default function SendPersonalizedMail() {
                     </div>
                 </div>
                 {/* Preview section */}
-                <div className="col-lg-8">
-                    <div className="card shadow-sm mb-4" style={{ position: 'relative', textAlign: 'center' }}>
+                <div className="spm-col-lg-8">
+                    <div className="card spm-card shadow-sm mb-4" style={{ position: 'relative', textAlign: 'center' }}>
                         <div className="card-body">
                             <h5>Preview</h5>
                             <div className="mb-2">
@@ -184,7 +181,7 @@ export default function SendPersonalizedMail() {
                                 <span className="ms-2">{recipients.length > 0 ? `Previewing ${previewIndex + 1} of ${recipients.length}` : 'No recipient loaded'}</span>
                             </div>
                             <div className="d-flex text-start align-items-center justify-content-center" style={{ maxHeight: 470, minHeight: 444, background: '#f8f9fa' }}>
-                                <div style={{ background: '#fff', boxShadow: '0 0 8px rgba(0,0,0,0.05)', maxWidth: '100%', width: '900px', maxHeight: 460, minHeight: 440, padding: '20px', overflowY: 'auto' }}>
+                                <div className="spm-preview-box">
                                     <div dangerouslySetInnerHTML={{ __html: renderTemplate(template, previewData) }} />
                                 </div>
                             </div>
@@ -230,9 +227,9 @@ export default function SendPersonalizedMail() {
 
             {/* Excel/CSV Preview Table */}
             {recipients.length > 0 && (
-                <div className="card mt-4 mb-5 shadow-sm">
+                <div className="card mt-4 mb-5 shadow-sm spm-card">
                     <div className="card-header fw-bold">Excel/CSV Data Preview</div>
-                    <div className="table-responsive" style={{ maxHeight: 320, overflowY: 'auto' }}>
+                    <div className="spm-table-responsive" style={{ maxHeight: 320, overflowY: 'auto' }}>
                         <table className="table table-bordered table-sm mb-0">
                             <thead className="table-light">
                                 <tr>

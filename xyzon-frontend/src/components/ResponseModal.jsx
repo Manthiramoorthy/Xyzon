@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { enquiryApi } from '../api/enquiryApi';
+import ICONS from '../constants/icons';
 import './ResponseModal.css';
 
 const ResponseModal = ({ enquiry, onClose, onSent }) => {
@@ -111,14 +112,18 @@ Xyzon Team`
             <div className="modal-content response-modal" onClick={(e) => e.stopPropagation()}>
                 <div className="modal-header">
                     <h2>Send Response</h2>
-                    <button className="close-btn" onClick={onClose}>×</button>
+                    <button className="close-btn" onClick={onClose}>
+                        <ICONS.CLOSE />
+                    </button>
                 </div>
 
                 <div className="modal-body">
                     {error && (
                         <div className="error-message">
                             <span>⚠️ {error}</span>
-                            <button onClick={() => setError('')}>×</button>
+                            <button onClick={() => setError('')}>
+                                <ICONS.CLOSE />
+                            </button>
                         </div>
                     )}
 
@@ -245,6 +250,7 @@ Xyzon Team`
                         className="btn-secondary"
                         disabled={loading}
                     >
+                        <ICONS.CANCEL className="me-2" />
                         Cancel
                     </button>
                     <button
@@ -260,7 +266,8 @@ Xyzon Team`
                             </>
                         ) : (
                             <>
-                                📧 Send Response
+                                <ICONS.EMAIL className="me-2" />
+                                Send Response
                             </>
                         )}
                     </button>

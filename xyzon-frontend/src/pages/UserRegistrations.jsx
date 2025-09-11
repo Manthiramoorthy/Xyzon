@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useEvent } from '../context/EventContext';
 import { useNavigate } from 'react-router-dom';
 import { Link } from 'react-router-dom';
+import SearchBar from '../components/SearchBar';
 import {
     FaCalendarAlt, FaTicketAlt
 } from 'react-icons/fa';
@@ -29,10 +30,11 @@ export default function UserRegistrations() {
     };
 
     const filteredRegistrations = userRegistrations.filter(reg => {
-        const matchesFilter = filter === 'all' || reg.status === filter;
-        const matchesSearch =
-            reg.event.title.toLowerCase().includes(search.toLowerCase()) ||
-            (reg.event.shortDescription && reg.event.shortDescription.toLowerCase().includes(search.toLowerCase()));
+        const status = reg.status || 'registered';
+        const matchesFilter = filter === 'all' || status === filter;
+        const title = reg.event?.title || '';
+        const shortDesc = reg.event?.shortDescription || '';
+        const matchesSearch = title.toLowerCase().includes(search.toLowerCase()) || shortDesc.toLowerCase().includes(search.toLowerCase());
         return matchesFilter && matchesSearch;
     });
 
@@ -83,13 +85,13 @@ export default function UserRegistrations() {
                         My Event Registrations
                     </h1>
                     <div className="d-flex gap-2 align-items-center mt-3 mt-md-0">
-                        <input
-                            type="text"
-                            className="form-control"
-                            style={{ minWidth: 220 }}
-                            placeholder="Search your events..."
+                        <SearchBar
                             value={search}
-                            onChange={e => setSearch(e.target.value)}
+                            onChange={setSearch}
+                            placeholder="Search your events..."
+                            onClear={() => setSearch('')}
+                            className="flex-grow-1"
+                            style={{ minWidth: 220 }}
                         />
                     </div>
                 </div>
@@ -121,7 +123,7 @@ export default function UserRegistrations() {
             {/* Error */}
             {error && (
                 <div className="alert alert-danger" role="alert">
-                    {error}
+                    {typeof error === 'string' ? error : error.message || 'An error occurred'}
                 </div>
             )}
 

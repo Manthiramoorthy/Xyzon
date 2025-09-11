@@ -1,22 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { useEvent } from '../context/EventContext';
 import { useAuth } from '../auth/AuthContext';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import SearchBar from '../components/SearchBar';
 import {
     FaCalendarAlt, FaClock, FaMapMarkerAlt, FaUsers, FaTag,
-    FaSearch, FaFilter, FaStar, FaTicketAlt, FaGlobe, FaWifi,
+    FaFilter, FaStar, FaTicketAlt, FaGlobe, FaWifi,
     FaCheckCircle
 } from 'react-icons/fa';
 
-export const EventCard = ({ event, onRegister, userRegistrations = [] }) => {
+export const EventCard = ({ event, userRegistrations = [] }) => {
+    const navigate = useNavigate();
     const isUpcoming = new Date(event.startDate) > new Date();
     const isRegistrationOpen = new Date(event.registrationEndDate) > new Date() &&
         new Date(event.registrationStartDate) <= new Date();
 
-    // Check if user is registered for this event
-    const isUserRegistered = userRegistrations.some(reg =>
-        reg.event?._id === event._id || reg.eventId === event._id
-    );
+    // Determine user registration (with status) for this event
+    const userReg = userRegistrations.find(reg => reg.event?._id === event._id || reg.eventId === event._id);
+    const isUserRegistered = !!userReg;
+    const regStatus = userReg?.status; // registered | attended | absent | cancelled
 
     const formatDate = (date) => {
         return new Date(date).toLocaleDateString('en-US', {
@@ -43,8 +45,38 @@ export const EventCard = ({ event, onRegister, userRegistrations = [] }) => {
         }
     };
 
+    const handleCardClick = (e) => {
+        // Avoid triggering when clicking an inner link/button already
+        if (e.target.closest('button, a')) return;
+        navigate(`/events/${event._id}`);
+    };
+
+    const renderCTA = () => {
+        if (isUserRegistered) {
+            switch (regStatus) {
+                case 'attended':
+                    return <Link to={`/events/${event._id}`} className="btn btn-success w-100"><FaCheckCircle className="me-2" /> Attended</Link>;
+                case 'registered':
+                    return <Link to={`/events/${event._id}`} className="btn btn-info w-100"><FaCheckCircle className="me-2" /> Already Registered</Link>;
+                case 'absent':
+                    return <Link to={`/events/${event._id}`} className="btn btn-warning w-100"><FaCheckCircle className="me-2" /> Marked Absent</Link>;
+                case 'cancelled':
+                    return <Link to={`/events/${event._id}`} className="btn btn-outline-danger w-100"><FaCheckCircle className="me-2" /> Cancelled</Link>;
+                default:
+                    return <Link to={`/events/${event._id}`} className="btn btn-secondary w-100"><FaCheckCircle className="me-2" /> Registered</Link>;
+            }
+        }
+        if (isRegistrationOpen && isUpcoming) {
+            return <Link to={`/events/${event._id}`} className="btn btn-primary w-100">Register Now</Link>;
+        }
+        if (!isUpcoming) {
+            return <Link to={`/events/${event._id}`} className="btn btn-secondary w-100">Event Completed</Link>;
+        }
+        return <Link to={`/events/${event._id}`} className="btn btn-outline-secondary w-100">Registration Closed</Link>;
+    };
+
     return (
-        <div className="card shadow-sm h-100 event-card">
+        <div className="card shadow-sm h-100 event-card position-relative" role="button" onClick={handleCardClick} style={{ cursor: 'pointer' }}>
             {event.bannerUrl && (
                 <img src={event.bannerUrl} alt={event.title} className="card-img-top" style={{ height: '200px', objectFit: 'cover' }} />
             )}
@@ -103,27 +135,7 @@ export const EventCard = ({ event, onRegister, userRegistrations = [] }) => {
                 )}
 
                 <div className="mt-auto">
-                    {isUserRegistered ? (
-                        <button className="btn btn-success w-100" disabled>
-                            <FaCheckCircle className="me-2" />
-                            Event Registered
-                        </button>
-                    ) : isRegistrationOpen && isUpcoming ? (
-                        <button
-                            className="btn btn-primary w-100"
-                            onClick={() => onRegister(event)}
-                        >
-                            Register Now
-                        </button>
-                    ) : !isUpcoming ? (
-                        <button className="btn btn-secondary w-100" disabled>
-                            Event Completed
-                        </button>
-                    ) : (
-                        <button className="btn btn-outline-secondary w-100" disabled>
-                            Registration Closed
-                        </button>
-                    )}
+                    {renderCTA()}
                 </div>
             </div>
         </div>
@@ -179,10 +191,7 @@ export default function EventList() {
         setPage(1);
     };
 
-    const handleRegister = (event) => {
-        // Navigate to registration page or open registration modal
-        window.location.href = `/events/${event._id}/register`;
-    };
+    // Card now navigates to event details directly; no separate register handler needed
 
     const categories = ['Technology', 'Business', 'Education', 'Health', 'Arts', 'Sports'];
     const eventModes = ['online', 'offline', 'hybrid'];
@@ -211,7 +220,7 @@ export default function EventList() {
 
     return (
         <div className="container py-4">
-        
+
             {/* Search and Filters */}
             <div className="row mb-4">
                 <div className="col-12">
@@ -219,18 +228,12 @@ export default function EventList() {
                         <div className="card-body">
                             <div className="row align-items-center">
                                 <div className="col-md-6">
-                                    <div className="input-group">
-                                        <span className="input-group-text">
-                                            <FaSearch />
-                                        </span>
-                                        <input
-                                            type="text"
-                                            className="form-control"
-                                            placeholder="Search events..."
-                                            value={filters.search}
-                                            onChange={(e) => handleFilterChange('search', e.target.value)}
-                                        />
-                                    </div>
+                                    <SearchBar
+                                        value={filters.search}
+                                        onChange={(value) => handleFilterChange('search', value)}
+                                        placeholder="Search events..."
+                                        onClear={() => handleFilterChange('search', '')}
+                                    />
                                 </div>
                                 <div className="col-md-6 text-end">
                                     <button
@@ -326,11 +329,7 @@ export default function EventList() {
                 ) : (
                     upcomingEvents.map(event => (
                         <div key={event._id} className="col-lg-4 col-md-6 mb-4">
-                            <EventCard
-                                event={event}
-                                onRegister={handleRegister}
-                                userRegistrations={userRegistrations}
-                            />
+                            <EventCard event={event} userRegistrations={userRegistrations} />
                         </div>
                     ))
                 )}
@@ -352,11 +351,7 @@ export default function EventList() {
                         <div className="row">
                             {pastEvents.map(ev => (
                                 <div key={ev._id} className="col-lg-4 col-md-6 mb-4">
-                                    <EventCard
-                                        event={ev}
-                                        onRegister={handleRegister}
-                                        userRegistrations={userRegistrations}
-                                    />
+                                    <EventCard event={ev} userRegistrations={userRegistrations} />
                                 </div>
                             ))}
                         </div>

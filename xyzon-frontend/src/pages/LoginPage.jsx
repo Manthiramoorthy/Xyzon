@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
-import { FiMail, FiLock, FiEye, FiEyeOff, FiAlertCircle } from 'react-icons/fi';
+import ICONS from '../constants/icons';
+import { FiMail, FiLock, FiAlertCircle } from 'react-icons/fi';
 import '../auth/authStyles.css';
 
 export default function LoginPage() {
@@ -28,6 +29,7 @@ export default function LoginPage() {
             // Don't navigate here, let the useEffect handle it
         } catch {
             // Error is handled by AuthContext
+            console.log('Login failed');
         } finally {
             setLoading(false);
         }
@@ -44,76 +46,40 @@ export default function LoginPage() {
     const [showPwd, setShowPwd] = useState(false);
     return (
         <div className="auth-page-root">
-            <div className="auth-shell">
+            <div className="auth-shell fade-in">
                 <div className="auth-panel-brand blue">
                     <div className="brand-inner">
-                        <img src="/assets/images/xyzon.png" alt="Xyzon" className="auth-logo" />
-                        <div className="brand-badge">
-                            <span className="badge-text">Trusted Platform</span>
-                            <div className="badge-icon">✓</div>
-                        </div>
-                        <h1>Welcome Back to Xyzon</h1>
-                        <p className="brand-subtitle">Continue your journey of innovation and entrepreneurship with cutting-edge programs designed for tomorrow's leaders.</p>
-                        <div className="feature-list">
-                            <div className="feature-item">
-                                <div className="feature-icon">🚀</div>
-                                <div className="feature-content">
-                                    <h3>Launch Your Ideas</h3>
-                                    <p>Transform concepts into reality with expert guidance</p>
-                                </div>
-                            </div>
-                            <div className="feature-item">
-                                <div className="feature-icon">🏆</div>
-                                <div className="feature-content">
-                                    <h3>Win Hackathons</h3>
-                                    <p>Compete in industry-level challenges and competitions</p>
-                                </div>
-                            </div>
-                            <div className="feature-item">
-                                <div className="feature-icon">🌟</div>
-                                <div className="feature-content">
-                                    <h3>Build Your Network</h3>
-                                    <p>Connect with mentors, peers, and industry leaders</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div className="stats-row">
-                            <div className="stat">
-                                <div className="stat-number">500+</div>
-                                <div className="stat-label">Students</div>
-                            </div>
-                            <div className="stat">
-                                <div className="stat-number">50+</div>
-                                <div className="stat-label">Projects</div>
-                            </div>
-                            <div className="stat">
-                                <div className="stat-number">20+</div>
-                                <div className="stat-label">Mentors</div>
-                            </div>
-                        </div>
+                        <img src="/assets/images/default-logo.jpeg" alt="Xyzon" className="auth-logo" />
+                        <h1>Welcome Back</h1>
+                        <p>Continue your innovation journey</p>
+                        <ul>
+                            <li>✨ Premium Learning</li>
+                            <li>🚀 Live Projects</li>
+                            <li>🏆 Industry Recognition</li>
+                        </ul>
                     </div>
                 </div>
                 <form onSubmit={submit} className="auth-form-panel" aria-describedby={error ? 'login-error' : undefined}>
-                    <h2>Welcome Back</h2>
-                    {error && <div id="login-error" className="auth-error" role="alert"><FiAlertCircle style={{ marginTop: 2 }} /> {error}</div>}
+                    <h2>Sign In</h2>
+                    {error && <div id="login-error" className="auth-error" role="alert"><FiAlertCircle style={{ marginTop: 2 }} /> {typeof error === 'string' ? error : error.message || 'An error occurred'}</div>}
                     <div className="auth-field">
-                        <label className="auth-label" htmlFor="login-email">Email Address</label>
+                        <label className="auth-label" htmlFor="login-email">Email</label>
                         <div className="auth-input-wrap">
                             <FiMail className="auth-icon" />
-                            <input id="login-email" className="auth-input" name="email" type="email" value={form.email} onChange={onChange} required placeholder="Enter your email" autoComplete="email" />
+                            <input id="login-email" className="auth-input" name="email" type="email" value={form.email} onChange={onChange} required placeholder="you@domain.com" autoComplete="email" />
                         </div>
                     </div>
                     <div className="auth-field">
                         <label className="auth-label" htmlFor="login-password">Password</label>
                         <div className="auth-input-wrap">
                             <FiLock className="auth-icon" />
-                            <input id="login-password" className="auth-input" name="password" type={showPwd ? 'text' : 'password'} value={form.password} onChange={onChange} required placeholder="Enter your password" autoComplete="current-password" />
-                            <button type="button" onClick={() => setShowPwd(s => !s)} className="auth-eye-btn" aria-label={showPwd ? 'Hide password' : 'Show password'}>{showPwd ? <FiEyeOff /> : <FiEye />}</button>
+                            <input id="login-password" className="auth-input" name="password" type={showPwd ? 'text' : 'password'} value={form.password} onChange={onChange} required placeholder="••••••••" autoComplete="current-password" />
+                            <button type="button" onClick={() => setShowPwd(s => !s)} className="auth-eye-btn" aria-label={showPwd ? 'Hide password' : 'Show password'}>{showPwd ? <ICONS.HIDE /> : <ICONS.VIEW />}</button>
                         </div>
                     </div>
-                    <button className="auth-btn" disabled={loading}>{loading ? 'Signing in...' : 'Sign In'}</button>
-                    <div className="auth-links" style={{ marginTop: 20 }}><Link to="/forgot-password">Forgot your password?</Link></div>
-                    <div className="auth-links">Don't have an account? <Link to="/register">Create one now</Link></div>
+                    <button className="auth-btn" disabled={loading}>{loading ? 'Logging in...' : 'Login'}</button>
+                    <div className="auth-links" style={{ marginTop: 14 }}><Link to="/forgot-password">Forgot password?</Link></div>
+                    <div className="auth-links">No account? <Link to="/register">Register</Link></div>
                 </form>
             </div>
         </div>

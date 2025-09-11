@@ -15,13 +15,13 @@ export default function AdminPanel() {
     useEffect(() => {
         setItems([
             { to: '/admin/events', label: 'My Events', icon: <FiCalendar /> },
-            { to: '/admin/events/create', label: 'Create Event', icon: <FiPlus /> },
             { to: '/admin/users', label: 'User Management', icon: <FiUserCheck /> },
+            { to: '/admin/enquiries', label: 'Enquiries', icon: <FiMessageSquare /> },
+            { to: '/admin/payments', label: 'Payments', icon: <FiBarChart /> },
             { to: '/admin/certificate-templates', label: 'Certificate Templates', icon: <FiAward /> },
             { to: '/admin/certificate', label: 'Certificate Generator', icon: <FiFileText /> },
             { to: '/admin/send-mail', label: 'Send Email', icon: <FiMail /> },
-            { to: '/admin/payments', label: 'Payments', icon: <FiBarChart /> },
-            { to: '/admin/enquiries', label: 'Enquiries', icon: <FiMessageSquare /> },
+            { to: '/admin/summary', label: 'Summary', icon: <FiBarChart /> },
             { action: logout, label: 'Logout', icon: <FiLogOut />, isAction: true },
         ]);
     }, [setItems, logout]);
