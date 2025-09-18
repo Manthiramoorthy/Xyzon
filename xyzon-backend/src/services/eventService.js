@@ -117,6 +117,9 @@ class EventService {
         if (!event) {
             throw new Error('Event not found');
         }
+        if (!userData.phone || !/^[0-9+()\-\s]{7,20}$/.test(userData.phone)) {
+            throw new Error('Valid phone number is required');
+        }
 
         // Check registration status
         const now = new Date();
@@ -277,6 +280,9 @@ class EventService {
         const event = await Event.findById(eventId);
         if (!event) {
             throw new Error('Event not found');
+        }
+        if (!userData.phone || !/^[0-9+()\-\s]{7,20}$/.test(userData.phone)) {
+            throw new Error('Valid phone number is required');
         }
 
         // Check registration status
@@ -513,16 +519,69 @@ class EventService {
             throw new Error('Event not found');
         }
 
-        const registrations = await EventRegistration.countDocuments({ event: eventId });
-        const attended = await EventRegistration.countDocuments({
-            event: eventId,
-            status: 'attended'
-        });
-        const certificatesIssued = await Certificate.countDocuments({ event: eventId });
-        const totalRevenue = await Payment.aggregate([
-            { $match: { event: event._id, status: 'paid' } },
-            { $group: { _id: null, total: { $sum: '$amount' } } }
+        // Basic counts
+        const [registrationsTotal, attended, certificatesIssued] = await Promise.all([
+            EventRegistration.countDocuments({ event: eventId }),
+            EventRegistration.countDocuments({ event: eventId, status: 'attended' }),
+            Certificate.countDocuments({ event: eventId })
         ]);
+
+        // Registration status distribution
+        const registrationStatusAgg = await EventRegistration.aggregate([
+            { $match: { event: event._id } },
+            { $group: { _id: '$status', count: { $sum: 1 } } }
+        ]);
+        const registrationStatus = registrationStatusAgg.reduce((acc, r) => { acc[r._id || 'unknown'] = r.count; return acc; }, {});
+
+        // Payments aggregation
+        const paymentsAgg = await Payment.aggregate([
+            { $match: { event: event._id } },
+            {
+                $group: {
+                    _id: '$status',
+                    count: { $sum: 1 },
+                    amount: { $sum: '$amount' },
+                    discount: { $sum: { $ifNull: ['$discountAmount', 0] } },
+                    original: { $sum: { $ifNull: ['$originalAmount', '$amount'] } }
+                }
+            }
+        ]);
+        const paymentStatus = paymentsAgg.reduce((acc, p) => { acc[p._id] = { count: p.count, amount: p.amount, discount: p.discount, original: p.original }; return acc; }, {});
+
+        // Payment methods breakdown
+        const paymentMethodsAgg = await Payment.aggregate([
+            { $match: { event: event._id, status: 'paid' } },
+            { $group: { _id: '$method', count: { $sum: 1 }, amount: { $sum: '$amount' } } }
+        ]);
+        const paymentMethods = paymentMethodsAgg.map(m => ({ method: m._id || 'unknown', count: m.count, amount: m.amount }));
+
+        // Coupon usage breakdown
+        const couponAgg = await Payment.aggregate([
+            { $match: { event: event._id, couponCode: { $ne: null }, status: 'paid' } },
+            { $group: { _id: '$couponCode', uses: { $sum: 1 }, discount: { $sum: { $ifNull: ['$discountAmount', 0] } }, amount: { $sum: '$amount' } } },
+            { $sort: { uses: -1 } }
+        ]);
+        const coupons = couponAgg.map(c => ({ code: c._id, uses: c.uses, discount: c.discount, amount: c.amount }));
+
+        // Daily trends (registrations & revenue) last 30 days
+        const since = new Date(); since.setDate(since.getDate() - 30);
+        const dailyRegistrationsAgg = await EventRegistration.aggregate([
+            { $match: { event: event._id, createdAt: { $gte: since } } },
+            { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } }, count: { $sum: 1 } } },
+            { $sort: { _id: 1 } }
+        ]);
+        const dailyRevenueAgg = await Payment.aggregate([
+            { $match: { event: event._id, status: 'paid', paidAt: { $ne: null }, createdAt: { $gte: since } } },
+            { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$paidAt' } }, amount: { $sum: '$amount' }, count: { $sum: 1 } } },
+            { $sort: { _id: 1 } }
+        ]);
+        const dailyRegistrations = dailyRegistrationsAgg.map(d => ({ date: d._id, count: d.count }));
+        const dailyRevenue = dailyRevenueAgg.map(d => ({ date: d._id, amount: d.amount, count: d.count }));
+
+        // Totals
+        const totalPaidAmount = paymentsAgg.filter(p => p._id === 'paid').reduce((s, p) => s + p.amount, 0);
+        const totalDiscount = paymentsAgg.reduce((s, p) => s + p.discount, 0);
+        const totalOriginal = paymentsAgg.reduce((s, p) => s + p.original, 0);
 
         return {
             event: {
@@ -531,14 +590,26 @@ class EventService {
                 status: event.status,
                 startDate: event.startDate,
                 endDate: event.endDate,
-                maxParticipants: event.maxParticipants
+                maxParticipants: event.maxParticipants,
+                eventType: event.eventType,
+                price: event.price
             },
             stats: {
-                totalRegistrations: registrations,
+                totalRegistrations: registrationsTotal,
                 attendedParticipants: attended,
                 certificatesIssued,
-                revenue: totalRevenue[0]?.total || 0,
-                attendanceRate: registrations > 0 ? (attended / registrations * 100).toFixed(2) : 0
+                revenue: totalPaidAmount,
+                totalDiscount,
+                totalOriginal,
+                netRevenue: totalPaidAmount,
+                averageTicket: registrationsTotal > 0 ? (totalPaidAmount / registrationsTotal) : 0,
+                attendanceRate: registrationsTotal > 0 ? (attended / registrationsTotal * 100).toFixed(2) : 0,
+                registrationStatus,
+                paymentStatus,
+                paymentMethods,
+                coupons,
+                dailyRegistrations,
+                dailyRevenue
             }
         };
     }

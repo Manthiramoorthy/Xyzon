@@ -7,6 +7,7 @@ const profileRoutes = require('./routes/profileRoutes');
 const certificateRoutes = require('./routes/certificateRoutes');
 const certificateTemplateRoutes = require('./routes/certificateTemplateRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
+const couponRoutes = require('./routes/couponRoutes');
 const enquiryRoutes = require('./routes/enquiryRoutes');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -44,6 +45,7 @@ app.use('/api/events', eventRoutes);
 app.use('/api/certificates', certificateRoutes);
 app.use('/api/certificate-templates', certificateTemplateRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/coupons', couponRoutes);
 app.use('/api/enquiries', enquiryRoutes);
 
 // Health check endpoint

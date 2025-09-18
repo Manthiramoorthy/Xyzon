@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { useToast } from '../context/ToastContext';
-import { eventApi, registrationApi } from '../api/eventApi';
+import { eventApi, registrationApi, couponApi } from '../api/eventApi';
 import {
     FaArrowLeft, FaCalendarAlt, FaClock, FaMapMarkerAlt,
     FaUsers, FaTag, FaMoneyBillWave, FaGlobe, FaWifi,
@@ -32,6 +32,11 @@ export default function EventRegister() {
         organization: '',
         answers: []
     });
+    const [step, setStep] = useState('form'); // form | review
+    const [couponCode, setCouponCode] = useState('');
+    const [couponApplying, setCouponApplying] = useState(false);
+    const [appliedCoupon, setAppliedCoupon] = useState(null); // {code, discount, finalAmount}
+    const [couponError, setCouponError] = useState(null);
 
     useEffect(() => { loadEvent(); }, [id]);
     // Countdown (registration end or event start)
@@ -151,10 +156,14 @@ export default function EventRegister() {
 
     const retryPayment = () => {
         resetPaymentFlow();
-        // Slight delay to ensure state reset
         setTimeout(() => {
-            const fakeEvent = { preventDefault: () => { } };
-            handleSubmit(fakeEvent);
+            // Always ensure we're on review step before retrying
+            if (event?.eventType === 'paid') {
+                setStep('review');
+                initiatePayment();
+            } else {
+                handleFreeRegistration();
+            }
         }, 50);
     };
 
@@ -185,130 +194,111 @@ export default function EventRegister() {
         return 0;
     }, [paymentStage, currentStageIndex, STAGES.length]);
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-
-        if (!user) {
-            navigate('/login');
-            return;
-        }
-
-        setRegistering(true);
-        setGatewayError(null);
-        try {
-            if (event.eventType === 'paid') {
-                setPaymentStage('creating');
-                // 1. Create Razorpay order (no registration yet) with potential reuse
-                let orderResponse;
-                try {
-                    orderResponse = await registrationApi.createRazorpayOrder({
-                        eventId: event._id,
-                        reuseExisting: true
-                    });
-                } catch (err) {
-                    // If payment in progress, show modal to user to choose
-                    if (err.response?.data?.code === 'PAYMENT_IN_PROGRESS') {
-                        setActivePaymentMeta({ paymentId: err.response.data.paymentId });
-                        setPaymentStage('idle');
-                        setShowPaymentModal(true);
-                        toast.info('You have an ongoing payment attempt.');
-                        return;
-                    }
-                    throw err;
+    const validateForm = () => {
+        if (!registrationData.name || !registrationData.email || !registrationData.phone) return false;
+        if (!/^[0-9+()\-\s]{7,20}$/.test(registrationData.phone)) return false;
+        // required custom questions
+        if (event?.registrationQuestions?.length) {
+            for (const q of event.registrationQuestions) {
+                if (q.required) {
+                    const ans = registrationData.answers.find(a => a.questionId === (q._id || q.id));
+                    if (!ans || !ans.answer?.trim()) return false;
                 }
+            }
+        }
+        return true;
+    };
 
-                console.log('Order Response:', orderResponse);
-                console.log('Order Response Data:', orderResponse.data);
+    const handleFormSubmit = (e) => {
+        e.preventDefault();
+        if (!user) { navigate('/login'); return; }
+        if (!validateForm()) { toast.error('Please fill all required fields'); return; }
+        if (event.eventType === 'free') {
+            handleFreeRegistration();
+        } else {
+            setStep('review');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    };
 
-                // Extract orderId from the nested data structure
-                const orderId = orderResponse.data?.data?.orderId || orderResponse.data?.orderId || orderResponse.data?.id;
-                console.log('Extracted Order ID:', orderId);
+    const handleFreeRegistration = async () => {
+        try {
+            setRegistering(true);
+            setPaymentStage('registering');
+            await registrationApi.registerForEvent(event._id, registrationData);
+            setPaymentStage('completed');
+            toast.success('Registration successful!');
+            navigate('/user/registrations');
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Registration failed');
+        } finally { setRegistering(false); }
+    };
 
-                if (!orderId) {
-                    console.error('No order ID found in response:', orderResponse);
-                    toast.error('Failed to create payment order. Please try again.');
+    const initiatePayment = async (opts = {}) => {
+        const { reuseExisting = true, forceCancelExisting = false } = opts;
+        try {
+            setRegistering(true);
+            setPaymentStage('creating');
+            let orderResponse;
+            try {
+                orderResponse = await registrationApi.createRazorpayOrder({
+                    eventId: event._id,
+                    couponCode: appliedCoupon?.code,
+                    reuseExisting,
+                    forceCancelExisting
+                });
+            } catch (err) {
+                if (err.response?.data?.code === 'PAYMENT_IN_PROGRESS' && reuseExisting) {
+                    setActivePaymentMeta({ paymentId: err.response.data.paymentId });
+                    setPaymentStage('idle');
+                    setShowPaymentModal(true);
+                    toast.info('You have an ongoing payment attempt.');
                     return;
                 }
-
-                const options = {
-                    key: import.meta.env.VITE_RAZORPAY_KEY_ID,
-                    amount: event.price * 100, // Always use event.price * 100 for display
-                    currency: orderResponse.data.currency,
-                    name: `Xyzon Events - ${event.title}`,
-                    description: event.shortDescription || event.title,
-                    order_id: orderId,
-                    handler: async (response) => {
-                        try {
-                            setPaymentStage('verifying');
-                            console.log('Razorpay Response:', response);
-
-                            // Check if all required fields are present
-                            if (!response.razorpay_order_id || !response.razorpay_payment_id || !response.razorpay_signature) {
-                                console.error('Missing required fields in Razorpay response:', {
-                                    order_id: response.razorpay_order_id,
-                                    payment_id: response.razorpay_payment_id,
-                                    signature: response.razorpay_signature
-                                });
-                                toast.error('Payment incomplete. Missing verification data.');
-                                return;
-                            }
-
-                            // 2. Verify payment
-                            await registrationApi.verifyPayment({
-                                razorpay_order_id: response.razorpay_order_id,
-                                razorpay_payment_id: response.razorpay_payment_id,
-                                razorpay_signature: response.razorpay_signature
-                            });
-
-                            // 3. Create registration with the paid order
-                            setPaymentStage('registering');
-                            await registrationApi.registerAfterPayment({
-                                ...registrationData,
-                                razorpay_order_id: response.razorpay_order_id
-                            });
-
-                            setPaymentStage('completed');
-                            toast.success('Registration successful! You will receive a confirmation email shortly.');
-                            navigate('/user/registrations');
-                        } catch (error) {
-                            console.log(error)
-                            setPaymentStage('failed');
-                            toast.error(error.response?.data?.message || 'Payment verification or registration failed.');
-                        }
-                    },
-                    prefill: {
-                        name: registrationData.name,
-                        email: registrationData.email,
-                        contact: registrationData.phone
-                    },
-                    theme: {
-                        color: '#000066'
-                    },
-                    modal: {
-                        ondismiss: () => {
-                            setPaymentStage('cancelled');
-                            toast.info('Payment popup closed. You can retry.');
-                        }
-                    }
-                };
-                const razorpay = new window.Razorpay(options);
-                setPaymentStage('waiting_gateway');
-                razorpay.open();
-            } else {
-                // Free event registration
-                setPaymentStage('registering');
-                await registrationApi.registerForEvent(event._id, registrationData);
-                setPaymentStage('completed');
-                toast.success('Registration successful! You will receive a confirmation email shortly.');
-                navigate('/user/registrations');
+                throw err;
             }
+            const orderId = orderResponse.data?.data?.orderId || orderResponse.data?.orderId || orderResponse.data?.id;
+            if (!orderId) { toast.error('Failed to create payment order'); setPaymentStage('failed'); return; }
+            const options = {
+                key: import.meta.env.VITE_RAZORPAY_KEY_ID,
+                amount: (appliedCoupon?.finalAmount ?? event.price) * 100,
+                currency: orderResponse.data.currency,
+                name: `Xyzon Events - ${event.title}`,
+                description: event.shortDescription || event.title,
+                order_id: orderId,
+                handler: async (response) => {
+                    try {
+                        setPaymentStage('verifying');
+                        if (!response.razorpay_order_id || !response.razorpay_payment_id || !response.razorpay_signature) {
+                            toast.error('Payment incomplete. Missing verification data.');
+                            return;
+                        }
+                        await registrationApi.verifyPayment({
+                            razorpay_order_id: response.razorpay_order_id,
+                            razorpay_payment_id: response.razorpay_payment_id,
+                            razorpay_signature: response.razorpay_signature
+                        });
+                        setPaymentStage('registering');
+                        await registrationApi.registerAfterPayment({ ...registrationData, razorpay_order_id: response.razorpay_order_id });
+                        setPaymentStage('completed');
+                        toast.success('Registration successful!');
+                        navigate('/user/registrations');
+                    } catch (error) {
+                        setPaymentStage('failed');
+                        toast.error(error.response?.data?.message || 'Payment verification failed');
+                    }
+                },
+                prefill: { name: registrationData.name, email: registrationData.email, contact: registrationData.phone },
+                theme: { color: '#000066' },
+                modal: { ondismiss: () => { setPaymentStage('cancelled'); toast.info('Payment popup closed'); } }
+            };
+            const razorpay = new window.Razorpay(options);
+            setPaymentStage('waiting_gateway');
+            razorpay.open();
         } catch (error) {
-            console.log(error);
             setPaymentStage(p => (p === 'idle' || p === 'creating' || p === 'waiting_gateway') ? 'failed' : p);
-            toast.error(error.response?.data?.message || 'Registration / payment failed.');
-        } finally {
-            setRegistering(false);
-        }
+            toast.error(error.response?.data?.message || 'Payment initiation failed');
+        } finally { setRegistering(false); }
     };
 
     const formatDate = (date) => {
@@ -563,114 +553,206 @@ export default function EventRegister() {
                                     </div>
                                 </div>
                             ) : (
-                                <form onSubmit={handleSubmit}>
-                                    <fieldset className="mb-4">
-                                        <legend className="small text-uppercase text-muted fw-semibold mb-3">Your Information</legend>
-                                        <div className="row g-3">
-                                            <div className="col-md-6">
-                                                <label className="form-label">Full Name <span className="text-danger">*</span></label>
-                                                <input type="text" className="form-control" value={registrationData.name} onChange={(e) => handleInputChange('name', e.target.value)} required />
-                                            </div>
-                                            <div className="col-md-6">
-                                                <label className="form-label">Email <span className="text-danger">*</span></label>
-                                                <input type="email" className="form-control" value={registrationData.email} onChange={(e) => handleInputChange('email', e.target.value)} required />
-                                            </div>
-                                            <div className="col-md-6">
-                                                <label className="form-label">Phone Number</label>
-                                                <input type="tel" className="form-control" value={registrationData.phone} onChange={(e) => handleInputChange('phone', e.target.value)} placeholder="Optional" />
-                                            </div>
-                                            <div className="col-md-6">
-                                                <label className="form-label">Organization</label>
-                                                <input type="text" className="form-control" value={registrationData.organization} onChange={(e) => handleInputChange('organization', e.target.value)} placeholder="Optional" />
-                                            </div>
-                                        </div>
-                                    </fieldset>
-
-                                    {/* Custom Questions */}
-                                    {event.registrationQuestions?.length > 0 && (
-                                        <fieldset className="mb-4">
-                                            <legend className="small text-uppercase text-muted fw-semibold mb-3">Additional Information</legend>
-                                            {event.registrationQuestions.map((question, index) => {
-                                                const answer = registrationData.answers.find(a =>
-                                                    a.questionId === (question._id || question.id)
-                                                );
-                                                return (
-                                                    <div key={question._id || index} className="mb-3">
-                                                        <label className="form-label">
-                                                            {question.question}
-                                                            {question.required && <span className="text-danger"> *</span>}
-                                                        </label>
-                                                        {question.type === 'text' && (
-                                                            <input
-                                                                type="text"
-                                                                className="form-control"
-                                                                value={answer?.answer || ''}
-                                                                onChange={(e) => handleAnswerChange(
-                                                                    question._id || question.id,
-                                                                    e.target.value
-                                                                )}
-                                                                required={question.required}
-                                                            />
-                                                        )}
-                                                        {question.type === 'textarea' && (
-                                                            <textarea
-                                                                className="form-control"
-                                                                rows="3"
-                                                                value={answer?.answer || ''}
-                                                                onChange={(e) => handleAnswerChange(
-                                                                    question._id || question.id,
-                                                                    e.target.value
-                                                                )}
-                                                                required={question.required}
-                                                            />
-                                                        )}
-                                                        {question.type === 'select' && (
-                                                            <select
-                                                                className="form-select"
-                                                                value={answer?.answer || ''}
-                                                                onChange={(e) => handleAnswerChange(
-                                                                    question._id || question.id,
-                                                                    e.target.value
-                                                                )}
-                                                                required={question.required}
-                                                            >
-                                                                <option value="">Select an option</option>
-                                                                {question.options?.map((option, idx) => (
-                                                                    <option key={idx} value={option}>
-                                                                        {option}
-                                                                    </option>
-                                                                ))}
-                                                            </select>
-                                                        )}
+                                <>
+                                    {step === 'form' && (
+                                        <form onSubmit={handleFormSubmit}>
+                                            <fieldset className="mb-4">
+                                                <legend className="small text-uppercase text-muted fw-semibold mb-3">Your Information</legend>
+                                                <div className="row g-3">
+                                                    <div className="col-md-6">
+                                                        <label className="form-label">Full Name <span className="text-danger">*</span></label>
+                                                        <input type="text" className="form-control" value={registrationData.name} onChange={(e) => handleInputChange('name', e.target.value)} required />
                                                     </div>
-                                                );
-                                            })}
-                                        </fieldset>
-                                    )}
+                                                    <div className="col-md-6">
+                                                        <label className="form-label">Email <span className="text-danger">*</span></label>
+                                                        <input type="email" className="form-control" value={registrationData.email} onChange={(e) => handleInputChange('email', e.target.value)} required />
+                                                    </div>
+                                                    <div className="col-md-6">
+                                                        <label className="form-label">Phone Number <span className="text-danger">*</span></label>
+                                                        <input type="tel" className="form-control" value={registrationData.phone} onChange={(e) => handleInputChange('phone', e.target.value)} required placeholder="Include country code if outside India" />
+                                                        {!registrationData.phone && <div className="form-text text-danger">Phone is required</div>}
+                                                        {registrationData.phone && !/^[0-9+()\-\s]{7,20}$/.test(registrationData.phone) && <div className="form-text text-danger">Enter valid phone number</div>}
+                                                    </div>
+                                                    <div className="col-md-6">
+                                                        <label className="form-label">Organization</label>
+                                                        <input type="text" className="form-control" value={registrationData.organization} onChange={(e) => handleInputChange('organization', e.target.value)} placeholder="Optional" />
+                                                    </div>
+                                                </div>
+                                            </fieldset>
 
-                                    <div className="border-top pt-4">
-                                        <div className="d-flex flex-column flex-md-row align-items-center justify-content-between gap-3">
-                                            {event.eventType === 'paid' && (
-                                                <div className="text-start small w-100 w-md-auto">
-                                                    <div className="fw-semibold">Total Payable</div>
-                                                    <div className="display-6 fw-bold mb-0" style={{ fontSize: '1.8rem' }}>{currency(event.price)}</div>
-                                                    <div className="text-muted">Includes all taxes</div>
+                                            {/* Custom Questions */}
+                                            {event.registrationQuestions?.length > 0 && (
+                                                <fieldset className="mb-4">
+                                                    <legend className="small text-uppercase text-muted fw-semibold mb-3">Additional Information</legend>
+                                                    {event.registrationQuestions.map((question, index) => {
+                                                        const answer = registrationData.answers.find(a =>
+                                                            a.questionId === (question._id || question.id)
+                                                        );
+                                                        return (
+                                                            <div key={question._id || index} className="mb-3">
+                                                                <label className="form-label">
+                                                                    {question.question}
+                                                                    {question.required && <span className="text-danger"> *</span>}
+                                                                </label>
+                                                                {question.type === 'text' && (
+                                                                    <input
+                                                                        type="text"
+                                                                        className="form-control"
+                                                                        value={answer?.answer || ''}
+                                                                        onChange={(e) => handleAnswerChange(
+                                                                            question._id || question.id,
+                                                                            e.target.value
+                                                                        )}
+                                                                        required={question.required}
+                                                                    />
+                                                                )}
+                                                                {question.type === 'textarea' && (
+                                                                    <textarea
+                                                                        className="form-control"
+                                                                        rows="3"
+                                                                        value={answer?.answer || ''}
+                                                                        onChange={(e) => handleAnswerChange(
+                                                                            question._id || question.id,
+                                                                            e.target.value
+                                                                        )}
+                                                                        required={question.required}
+                                                                    />
+                                                                )}
+                                                                {question.type === 'select' && (
+                                                                    <select
+                                                                        className="form-select"
+                                                                        value={answer?.answer || ''}
+                                                                        onChange={(e) => handleAnswerChange(
+                                                                            question._id || question.id,
+                                                                            e.target.value
+                                                                        )}
+                                                                        required={question.required}
+                                                                    >
+                                                                        <option value="">Select an option</option>
+                                                                        {question.options?.map((option, idx) => (
+                                                                            <option key={idx} value={option}>
+                                                                                {option}
+                                                                            </option>
+                                                                        ))}
+                                                                    </select>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </fieldset>
+                                            )}
+
+                                            <div className="border-top pt-4">
+                                                <div className="d-flex flex-column flex-md-row align-items-center justify-content-between gap-3">
+                                                    {event.eventType === 'paid' && (
+                                                        <div className="text-start small w-100 w-md-auto">
+                                                            <div className="fw-semibold">Total Payable</div>
+                                                            <div className="display-6 fw-bold mb-0" style={{ fontSize: '1.8rem' }}>
+                                                                {appliedCoupon ? (
+                                                                    <>
+                                                                        <span className="text-decoration-line-through text-muted me-2" style={{ fontSize: '1rem' }}>{currency(event.price)}</span>
+                                                                        {currency(appliedCoupon.finalAmount)}
+                                                                    </>
+                                                                ) : currency(event.price)}
+                                                            </div>
+                                                            {appliedCoupon && <div className="text-success small">Saved {currency(appliedCoupon.discount)}</div>}
+                                                            <div className="text-muted">Includes all taxes</div>
+                                                        </div>
+                                                    )}
+                                                    <div className="flex-grow-1 text-center">
+                                                        <button type="submit" className={`btn btn-lg px-4 ${event.eventType === 'paid' ? 'btn-primary' : 'btn-success'}`} disabled={registering} style={{ minWidth: 240 }}>
+                                                            {registering ? <><div className="spinner-border spinner-border-sm me-2" />Processing...</> : event.eventType === 'paid' ? 'Continue to Review' : <><FaTicketAlt className="me-2" />Register for Free</>}
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </form>
+                                    )}
+                                    {step === 'review' && event.eventType === 'paid' && (
+                                        <div className="pt-2">
+                                            <div className="alert alert-info small mb-4">Review your details and apply a coupon (if any) before proceeding with payment.</div>
+                                            <div className="row g-3 mb-3">
+                                                <div className="col-md-6">
+                                                    <div className="small text-muted">Name</div>
+                                                    <div className="fw-semibold">{registrationData.name}</div>
+                                                </div>
+                                                <div className="col-md-6">
+                                                    <div className="small text-muted">Email</div>
+                                                    <div className="fw-semibold">{registrationData.email}</div>
+                                                </div>
+                                                {registrationData.phone && (
+                                                    <div className="col-md-6">
+                                                        <div className="small text-muted">Phone</div>
+                                                        <div className="fw-semibold">{registrationData.phone}</div>
+                                                    </div>
+                                                )}
+                                                {registrationData.organization && (
+                                                    <div className="col-md-6">
+                                                        <div className="small text-muted">Organization</div>
+                                                        <div className="fw-semibold">{registrationData.organization}</div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                            {event.registrationQuestions?.length > 0 && (
+                                                <div className="mb-3">
+                                                    <div className="small text-muted mb-1">Responses</div>
+                                                    <ul className="small list-unstyled mb-0 border rounded p-2 bg-light" style={{ maxHeight: 180, overflowY: 'auto' }}>
+                                                        {registrationData.answers.filter(a => a.answer).map(a => (
+                                                            <li key={a.questionId} className="mb-1"><strong>{a.question}:</strong> {a.answer}</li>
+                                                        ))}
+                                                        {registrationData.answers.filter(a => a.answer).length === 0 && <li className="text-muted">No additional responses</li>}
+                                                    </ul>
                                                 </div>
                                             )}
-                                            <div className="flex-grow-1 text-center">
-                                                <button type="submit" className={`btn btn-lg px-4 ${event.eventType === 'paid' ? 'btn-primary' : 'btn-success'}`} disabled={registering} style={{ minWidth: 240 }}>
-                                                    {registering ? <><div className="spinner-border spinner-border-sm me-2" />Processing...</> : event.eventType === 'paid' ? <><FaMoneyBillWave className="me-2" />Pay {currency(event.price)} & Register</> : <><FaTicketAlt className="me-2" />Register for Free</>}
+                                            <div className="card border shadow-sm mb-3">
+                                                <div className="card-body p-3">
+                                                    <h6 className="fw-semibold mb-3">Payment Summary</h6>
+                                                    <div className="d-flex justify-content-between small mb-2"><span>Base Amount</span><span>{currency(event.price)}</span></div>
+                                                    {appliedCoupon && (
+                                                        <div className="d-flex justify-content-between small mb-2 text-success"><span>Coupon ({appliedCoupon.code})</span><span>- {currency(appliedCoupon.discount)}</span></div>
+                                                    )}
+                                                    <div className="d-flex justify-content-between fw-semibold border-top pt-2"><span>Payable</span><span>{currency(appliedCoupon?.finalAmount ?? event.price)}</span></div>
+                                                </div>
+                                            </div>
+                                            <div className="card border shadow-sm mb-4">
+                                                <div className="card-body p-3">
+                                                    <h6 className="fw-semibold mb-3">Apply Coupon</h6>
+                                                    {appliedCoupon ? (
+                                                        <div className="d-flex flex-wrap align-items-center gap-3">
+                                                            <div className="badge bg-success-subtle text-success border">{appliedCoupon.code} Applied</div>
+                                                            <div className="small">Saved {currency(appliedCoupon.discount)}</div>
+                                                            <button className="btn btn-sm btn-outline-danger" type="button" onClick={() => { setAppliedCoupon(null); setCouponCode(''); }}>Remove</button>
+                                                        </div>
+                                                    ) : (
+                                                        <form onSubmit={async (e) => {
+                                                            e.preventDefault();
+                                                            if (!couponCode.trim()) return;
+                                                            setCouponApplying(true); setCouponError(null);
+                                                            try { const resp = await couponApi.apply({ code: couponCode.trim(), eventId: event._id, amount: event.price }); setAppliedCoupon(resp.data.data); toast.success('Coupon applied'); } catch (err) { setCouponError(err.response?.data?.message || 'Failed to apply'); } finally { setCouponApplying(false); }
+                                                        }} className="d-flex flex-wrap gap-2 align-items-center">
+                                                            <input type="text" className="form-control" style={{ maxWidth: 200 }} placeholder="Enter code" value={couponCode} onChange={(e) => setCouponCode(e.target.value.toUpperCase())} />
+                                                            <button className="btn btn-outline-primary" type="submit" disabled={couponApplying}>{couponApplying ? <><FaSpinner className="fa-spin me-1" />Checking</> : 'Apply'}</button>
+                                                            {couponError && <div className="text-danger small w-100">{couponError}</div>}
+                                                        </form>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <div className="d-flex flex-wrap gap-2">
+                                                <button type="button" className="btn btn-outline-secondary" onClick={() => setStep('form')}>Back & Edit</button>
+                                                <button type="button" className="btn btn-primary" disabled={registering || paymentStage !== 'idle'} onClick={initiatePayment} style={{ minWidth: 220 }}>
+                                                    {registering || paymentStage !== 'idle' ? <><FaSpinner className="fa-spin me-2" />Processing...</> : <>Pay {currency(appliedCoupon?.finalAmount ?? event.price)} & Complete Registration</>}
                                                 </button>
-                                                {event.eventType === 'paid' && <div className="small text-muted mt-2 d-flex align-items-center justify-content-center gap-2"><FaShieldAlt /> Secure Razorpay Checkout</div>}
+                                                <div className="small text-muted align-self-center d-flex gap-1"><FaShieldAlt /> Secure Razorpay Checkout</div>
                                             </div>
                                         </div>
-                                    </div>
-                                </form>
+                                    )}
+                                </>
                             )}
                         </div>
                     </div>
                 </div>
             </div>
+            {/* Coupon box moved into review step */}
             {/* Existing payment in progress modal */}
             {showPaymentModal && (
                 <div className="modal fade show" style={{ display: 'block', background: 'rgba(0,0,0,0.6)' }}>
@@ -691,10 +773,18 @@ export default function EventRegister() {
                                 <button className="btn btn-outline-secondary btn-sm" onClick={() => setShowPaymentModal(false)}>Close</button>
                                 <div className="d-flex gap-2">
                                     <button className="btn btn-outline-danger btn-sm" onClick={async () => {
-                                        try { await registrationApi.createRazorpayOrder({ eventId: event._id, forceCancelExisting: true }); setShowPaymentModal(false); handleSubmit(new Event('submit')); } catch (e) { toast.error(e.response?.data?.message || 'Failed'); }
+                                        try {
+                                            setShowPaymentModal(false);
+                                            setStep('review');
+                                            await initiatePayment({ reuseExisting: false, forceCancelExisting: true });
+                                        } catch (e) { toast.error(e.response?.data?.message || 'Failed'); }
                                     }}>Cancel & New</button>
                                     <button className="btn btn-primary btn-sm" onClick={async () => {
-                                        try { await registrationApi.createRazorpayOrder({ eventId: event._id, reuseExisting: true }); setShowPaymentModal(false); handleSubmit(new Event('submit')); } catch (e) { toast.error(e.response?.data?.message || 'Failed to reuse'); }
+                                        try {
+                                            setShowPaymentModal(false);
+                                            setStep('review');
+                                            await initiatePayment({ reuseExisting: true });
+                                        } catch (e) { toast.error(e.response?.data?.message || 'Failed to reuse'); }
                                     }}>Continue Existing</button>
                                 </div>
                             </div>

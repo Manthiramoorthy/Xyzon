@@ -21,6 +21,9 @@ class PaymentController {
     // Create Payment Order (called during registration)
     static async createOrder(req, res) {
         try {
+            if (req.user && req.user.role === 'admin') {
+                return res.status(403).json({ success: false, message: 'Admins cannot create payment orders for events.' });
+            }
             if (!razorpay) {
                 console.error('Razorpay not initialized. ENV:', {
                     RAZORPAY_KEY_ID: process.env.RAZORPAY_KEY_ID,
@@ -36,7 +39,7 @@ class PaymentController {
                 });
             }
 
-            const { eventId } = req.body;
+            const { eventId, couponCode } = req.body;
             if (!eventId) {
                 console.error('Missing eventId in request body:', req.body);
                 return res.status(400).json({
@@ -68,13 +71,40 @@ class PaymentController {
                     message: 'Event price must be at least 1 rupee for paid events.'
                 });
             }
+            let finalAmount = event.price;
+            let discountAmount = 0;
+            let appliedCoupon = null;
+
+            if (couponCode) {
+                try {
+                    const Coupon = require('../models/Coupon');
+                    const { evaluateCouponValue, validateCoupon } = require('./couponController');
+                    const coupon = await Coupon.findOne({ code: couponCode.toUpperCase() });
+                    if (!coupon) {
+                        return res.status(400).json({ success: false, message: 'Invalid coupon code' });
+                    }
+                    await validateCoupon(coupon, req.user.id, event._id, event.price);
+                    discountAmount = evaluateCouponValue(coupon, event.price);
+                    finalAmount = event.price - discountAmount;
+                    appliedCoupon = coupon.code;
+                } catch (e) {
+                    return res.status(400).json({ success: false, message: e.message });
+                }
+            }
+
+            if (finalAmount < 1) {
+                finalAmount = 1; // Minimum 1 rupee to create order in Razorpay
+            }
+
             const options = {
-                amount: event.price * 100,
+                amount: Math.round(finalAmount * 100),
                 currency: event.currency || 'INR',
                 receipt,
                 notes: {
                     eventId: event._id.toString(),
-                    userId: req.user.id
+                    userId: req.user.id,
+                    coupon: appliedCoupon || undefined,
+                    discount: discountAmount ? discountAmount.toString() : undefined
                 }
             };
 
@@ -145,7 +175,10 @@ class PaymentController {
             const payment = new Payment({
                 user: req.user.id,
                 event: eventId,
-                amount: event.price,
+                amount: finalAmount,
+                originalAmount: event.price,
+                discountAmount,
+                couponCode: appliedCoupon,
                 currency: event.currency || 'INR',
                 razorpayOrderId: razorpayOrder.id,
                 receipt: options.receipt,
@@ -240,6 +273,15 @@ class PaymentController {
             payment.razorpaySignature = razorpay_signature;
             payment.paidAt = new Date();
             await payment.save();
+
+            // Update coupon stats if applied
+            if (payment.couponCode) {
+                const Coupon = require('../models/Coupon');
+                await Coupon.findOneAndUpdate(
+                    { code: payment.couponCode },
+                    { $inc: { totalRedemptions: 1, totalDiscountGiven: payment.discountAmount || 0 } }
+                );
+            }
 
             // Update registration status
             await EventRegistration.findByIdAndUpdate(payment.registration, {

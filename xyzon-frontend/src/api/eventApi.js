@@ -117,6 +117,18 @@ export const paymentApi = {
     getPaymentStatistics: (params = {}) => api.get('/payments/admin/statistics', { params }),
 };
 
+// Coupon APIs
+export const couponApi = {
+    // Admin
+    create: (data) => api.post('/coupons', data),
+    list: (params = {}) => api.get('/coupons', { params }),
+    get: (id) => api.get(`/coupons/${id}`),
+    update: (id, data) => api.put(`/coupons/${id}`, data),
+    remove: (id) => api.delete(`/coupons/${id}`),
+    // User apply
+    apply: (data) => api.post('/coupons/apply/code', data),
+};
+
 // Certificate APIs
 export const certificateApi = {
     // Certificate templates

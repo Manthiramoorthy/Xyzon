@@ -36,6 +36,7 @@ import EventRegister from './pages/EventRegister';
 import CertificateView from './pages/CertificateView';
 import CertificateVerification from './pages/CertificateVerification';
 import CertificateTemplateManager from './components/CertificateTemplateManager';
+import AdminCoupons from './pages/AdminCoupons';
 import ToastDemo from './components/ToastDemo';
 
 export default function AppRouter() {
@@ -85,6 +86,7 @@ export default function AppRouter() {
                                             <AdminPayments />
                                         </Suspense>
                                     } />
+                                    <Route path="coupons" element={<AdminCoupons />} />
                                     <Route path="enquiries" element={
                                         <Suspense fallback={<div>Loading...</div>}>
                                             <AdminEnquiries />

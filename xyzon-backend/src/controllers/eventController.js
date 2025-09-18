@@ -282,6 +282,9 @@ class EventController {
     // Register for Event
     static async registerForEvent(req, res) {
         try {
+            if (req.user && req.user.role === 'admin') {
+                return res.status(403).json({ success: false, message: 'Admins cannot register for events.' });
+            }
             const { answers } = req.body;
             const userData = {
                 name: req.body.name || req.user.name,
@@ -359,6 +362,9 @@ class EventController {
     // Create Registration after Payment
     static async createRegistrationAfterPayment(req, res) {
         try {
+            if (req.user && req.user.role === 'admin') {
+                return res.status(403).json({ success: false, message: 'Admins cannot register for events.' });
+            }
             const { razorpay_order_id } = req.body;
             const { answers } = req.body;
             const userData = {
@@ -631,6 +637,52 @@ class EventController {
                 success: false,
                 message: error.message
             });
+        }
+    }
+
+    // Export Event Statistics CSV
+    static async exportEventStatistics(req, res) {
+        try {
+            const data = await eventService.getEventStatistics(req.params.id);
+            const { event, stats } = data;
+            const rows = [];
+            rows.push(['Event', 'StartDate', 'EndDate', 'Status', 'Type', 'Price']);
+            rows.push([event.title, event.startDate, event.endDate, event.status, event.eventType, event.price || 0]);
+            rows.push([]);
+            rows.push(['Metric', 'Value']);
+            rows.push(['Total Registrations', stats.totalRegistrations]);
+            rows.push(['Attended', stats.attendedParticipants]);
+            rows.push(['Certificates Issued', stats.certificatesIssued]);
+            rows.push(['Revenue (Net)', stats.revenue]);
+            rows.push(['Original Amount', stats.totalOriginal]);
+            rows.push(['Total Discount', stats.totalDiscount]);
+            rows.push(['Average Ticket', stats.averageTicket]);
+            rows.push(['Attendance Rate %', stats.attendanceRate]);
+            rows.push([]);
+            rows.push(['Registration Status Distribution']);
+            Object.entries(stats.registrationStatus || {}).forEach(([k, v]) => rows.push([k, v]));
+            rows.push([]);
+            rows.push(['Payment Status', 'Count', 'Amount', 'Discount', 'Original']);
+            Object.entries(stats.paymentStatus || {}).forEach(([k, v]) => rows.push([k, v.count, v.amount, v.discount, v.original]));
+            rows.push([]);
+            rows.push(['Payment Methods', 'Count', 'Amount']);
+            (stats.paymentMethods || []).forEach(m => rows.push([m.method, m.count, m.amount]));
+            rows.push([]);
+            rows.push(['Coupons', 'Uses', 'Discount', 'Amount']);
+            (stats.coupons || []).forEach(c => rows.push([c.code, c.uses, c.discount, c.amount]));
+            rows.push([]);
+            rows.push(['Daily Registrations']);
+            (stats.dailyRegistrations || []).forEach(d => rows.push([d.date, d.count]));
+            rows.push([]);
+            rows.push(['Daily Revenue']);
+            (stats.dailyRevenue || []).forEach(d => rows.push([d.date, d.amount, d.count]));
+
+            const csv = rows.map(r => r.map(field => `"${String(field).replace(/"/g, '""')}"`).join(',')).join('\n');
+            res.setHeader('Content-Type', 'text/csv');
+            res.setHeader('Content-Disposition', `attachment; filename=event-${event.id}-statistics.csv`);
+            return res.send(csv);
+        } catch (error) {
+            res.status(500).json({ success: false, message: error.message });
         }
     }
 

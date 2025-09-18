@@ -137,13 +137,16 @@ export default function UserPayments() {
     const exportCSV = () => {
         try {
             setExporting(true);
-            const headers = ['Transaction ID', 'Event', 'Amount', 'Currency', 'Status', 'Paid Date', 'Created Date', 'Method', 'Bank'];
+            const headers = ['Transaction ID', 'Event', 'Amount', 'Original Amount', 'Discount', 'Coupon', 'Currency', 'Status', 'Paid Date', 'Created Date', 'Method', 'Bank'];
             const lines = [headers.join(',')];
             processedPayments.forEach(p => {
                 const row = [
                     p.razorpayPaymentId || p._id,
                     (p.event?.title || '').replace(/,/g, ' '),
                     p.amount,
+                    p.originalAmount ?? '',
+                    p.discountAmount ?? '',
+                    p.couponCode || '',
                     p.currency,
                     p.status,
                     p.paidAt ? new Date(p.paidAt).toISOString() : '',
@@ -295,8 +298,16 @@ export default function UserPayments() {
             cursorY += 34;
             // Use ASCII-safe amount representation to avoid font glyph issues (₹ often missing in default font)
             const amountDisplay = `INR ${Number(fullPayment.amount || 0).toFixed(2)}`;
-            field('Amount', amountDisplay); field('Method', fullPayment.method || 'Online Payment', 1);
+            field('Amount Paid', amountDisplay); field('Method', fullPayment.method || 'Online Payment', 1);
             cursorY += 34;
+            if (fullPayment.originalAmount && fullPayment.originalAmount !== fullPayment.amount) {
+                field('Original Amount', `INR ${Number(fullPayment.originalAmount).toFixed(2)}`); field('Discount', `INR ${Number(fullPayment.discountAmount || 0).toFixed(2)}`, 1);
+                cursorY += 34;
+            }
+            if (fullPayment.couponCode) {
+                field('Coupon Code', fullPayment.couponCode);
+                cursorY += 34;
+            }
             field('Created At', formatDate(fullPayment.createdAt)); field('Paid At', fullPayment.paidAt ? formatDate(fullPayment.paidAt) : '-', 1);
             cursorY += 40;
 
@@ -477,6 +488,7 @@ export default function UserPayments() {
                                             <th style={{ cursor: 'pointer', whiteSpace: 'nowrap' }} onClick={() => toggleSort('amount')}>
                                                 Amount {getSortIcon('amount')}
                                             </th>
+                                            <th style={{ whiteSpace: 'nowrap' }}>Coupon</th>
                                             <th style={{ whiteSpace: 'nowrap' }}>Txn ID</th>
                                             <th style={{ minWidth: 160 }}>Event</th>
                                             <th style={{ cursor: 'pointer', whiteSpace: 'nowrap' }} onClick={() => toggleSort('status')}>
@@ -503,9 +515,15 @@ export default function UserPayments() {
                                                     <span className="fw-bold text-success">
                                                         {formatAmount(payment.amount)}
                                                     </span>
+                                                    {payment.originalAmount && payment.originalAmount !== payment.amount && (
+                                                        <small className="text-muted d-block">Orig: {formatAmount(payment.originalAmount)} | Saved {formatAmount(payment.discountAmount)}</small>
+                                                    )}
                                                     <small className="text-muted d-block">
                                                         {payment.currency}
                                                     </small>
+                                                </td>
+                                                <td>
+                                                    {payment.couponCode ? <span className="badge bg-success-subtle text-success border">{payment.couponCode}</span> : <span className="text-muted small">—</span>}
                                                 </td>
                                                 <td>
                                                     <code className="text-primary">
@@ -621,6 +639,13 @@ export default function UserPayments() {
                                                 <div className="col-md-3">
                                                     <div className="small text-muted">Amount</div>
                                                     <div className="fw-semibold text-success">{formatAmount(viewing.amount)}</div>
+                                                    {viewing.originalAmount && viewing.originalAmount !== viewing.amount && (
+                                                        <div className="small text-muted">Orig {formatAmount(viewing.originalAmount)} | Saved {formatAmount(viewing.discountAmount)}</div>
+                                                    )}
+                                                </div>
+                                                <div className="col-md-3">
+                                                    <div className="small text-muted">Coupon</div>
+                                                    <div className="fw-semibold">{viewing.couponCode || '—'}</div>
                                                 </div>
                                                 <div className="col-md-6">
                                                     <div className="small text-muted">Event</div>

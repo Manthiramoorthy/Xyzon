@@ -31,6 +31,7 @@ router.get('/admin/my-events', auth('admin'), EventController.getMyEvents);
 router.get('/admin/summary', auth('admin'), EventController.getAdminSummary);
 router.get('/:id/registrations', auth('admin'), EventController.getEventRegistrations);
 router.get('/:id/statistics', auth('admin'), EventController.getEventStatistics);
+router.get('/:id/statistics/export', auth('admin'), EventController.exportEventStatistics);
 
 // Admin: Attendance and certificates
 router.get('/certificate-templates', auth('admin'), EventController.getCertificateTemplates);

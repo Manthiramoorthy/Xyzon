@@ -10,6 +10,10 @@ const paymentSchema = new mongoose.Schema({
     // Payment Details
     amount: { type: Number, required: true, min: 0 },
     currency: { type: String, default: 'INR' },
+    // Coupon / Discount
+    couponCode: { type: String },
+    discountAmount: { type: Number, default: 0 },
+    originalAmount: { type: Number },
 
     // Razorpay Details
     razorpayOrderId: { type: String, required: true },

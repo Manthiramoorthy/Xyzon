@@ -17,7 +17,7 @@ const eventRegistrationSchema = new mongoose.Schema({
     // Personal Info (in case user is not registered)
     name: { type: String, required: true },
     email: { type: String, required: true },
-    phone: { type: String },
+    phone: { type: String, required: true },
 
     // Registration Answers
     answers: [registrationAnswerSchema],
